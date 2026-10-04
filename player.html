@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SoundForge Web Player</title>
+  <title>SoundForge Master Web Player</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -19,7 +19,7 @@
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-  <div class="max-w-3xl w-full bg-[#161b22] border border-[#30363d] rounded-2xl shadow-2xl p-6 space-y-5">
+  <div class="max-w-4xl w-full bg-[#161b22] border border-[#30363d] rounded-2xl shadow-2xl p-6 space-y-5">
     
     <!-- HEADER -->
     <div class="flex items-center justify-between border-b border-[#30363d] pb-4">
@@ -29,9 +29,9 @@
         </div>
         <div>
           <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-            SoundForge Master Player <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">STANDALONE ENGINE</span>
+            SoundForge Master Player <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">8-SLOT RACK</span>
           </h1>
-          <p class="text-xs text-slate-400">Multi-channel Web Audio & Speech player for .sfproj bundles</p>
+          <p class="text-xs text-slate-400">Multi-scene memory engine & universal .sfproj bundle player</p>
         </div>
       </div>
 
@@ -42,20 +42,30 @@
       </label>
     </div>
 
-    <!-- PERSISTENT MEMORY SLOTS (SAVE/LOAD SLOTS 1-4) -->
-    <div class="bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-          <i class="fa-solid fa-hard-drive text-cyan-400"></i> Local Memory Slots (Save & Quick Switch)
-        </span>
-        <span class="text-[10px] text-slate-500">Stored in browser local storage</span>
+    <!-- PERSISTENT MEMORY SLOTS (8 SLOTS RACK) -->
+    <div class="bg-[#0d1117] p-3.5 rounded-xl border border-[#30363d] space-y-2.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span class="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            Memory Rack (8 Persistent Scene Slots)
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-open-save-modal" class="px-2.5 py-1 bg-cyan-700 hover:bg-cyan-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition disabled:opacity-40" disabled>
+            <i class="fa-solid fa-floppy-disk"></i> Save Current Scene to Slot
+          </button>
+          <span class="text-[10px] text-slate-500 font-mono" id="active-slot-indicator">Active: None</span>
+        </div>
       </div>
-      <div class="grid grid-cols-4 gap-2" id="slots-grid">
-        <!-- Rendered dynamically -->
+
+      <!-- 8 SLOTS GRID -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5" id="slots-grid">
+        <!-- Rendered by JS -->
       </div>
     </div>
 
-    <!-- MAIN PLAYER TRANSPORT & TIME DISPLAY -->
+    <!-- MAIN TRANSPORT & SCRUB CONTROLS -->
     <div class="bg-[#0d1117] p-4 rounded-xl border border-[#30363d] flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <button id="btn-jump-start" title="Rewind to start" class="w-10 h-10 rounded-xl bg-[#21262d] hover:bg-[#30363d] text-slate-300 flex items-center justify-center transition">
@@ -78,7 +88,7 @@
     <!-- VISUAL TIMELINE RULER & ALL 4 TRACKS -->
     <div class="space-y-1">
       <div class="flex items-center justify-between text-xs text-slate-400 px-1 mb-1">
-        <span class="font-semibold text-white" id="scene-title">Drop a file or select a memory slot</span>
+        <span class="font-semibold text-white" id="scene-title">Drop a file or load an approved memory slot</span>
         <span class="font-mono text-cyan-400 text-[11px]" id="engine-status">Engine Idle</span>
       </div>
 
@@ -90,7 +100,7 @@
         <!-- Multi-Track Lanes Stack -->
         <div id="lanes-wrapper" class="h-full relative min-w-full flex flex-col justify-around py-1">
           <div class="text-xs text-slate-500 italic text-center py-12" id="empty-timeline-hint">
-            Load a .sfproj bundle file above or drop one directly onto this window.
+            Load a .sfproj bundle file above or pick a saved slot to activate playback.
           </div>
         </div>
       </div>
@@ -143,9 +153,12 @@
 
   <script>
     const PIXELS_PER_SECOND = 24;
+    const TOTAL_SLOTS = 8;
+
     let audioCtx = null;
     let availableVoices = [];
     let currentBundle = null;
+    let activeSlotLoaded = null;
     let isPlaying = false;
     let playheadTime = 0;
     let playbackStartTime = 0;
@@ -153,7 +166,7 @@
 
     let activeBufferNodes = [];
     let scheduledSpeechTimeouts = [];
-    let decodedAudioMap = new Map(); // id -> AudioBuffer
+    let decodedAudioMap = new Map();
     let channelGains = [1.0, 0.9, 0.8, 0.75];
 
     function getAudioContext() {
@@ -178,9 +191,11 @@
     const engineStatus = document.getElementById('engine-status');
     const lanesWrapper = document.getElementById('lanes-wrapper');
     const cuesList = document.getElementById('cues-list');
+    const btnOpenSaveModal = document.getElementById('btn-open-save-modal');
+    const activeSlotIndicator = document.getElementById('active-slot-indicator');
 
     /* ==========================================================================
-       FILE PARSER (DECODES BASE64 TO AUDIOBUFFERS & INITIALIZES TIMELINE)
+       FILE INGESTION & DECODING
        ========================================================================== */
     fileInput.onchange = (e) => {
       if (e.target.files && e.target.files[0]) {
@@ -204,6 +219,8 @@
         const json = JSON.parse(text);
 
         if (!json.tracks || !Array.isArray(json.tracks)) throw new Error('Invalid bundle format');
+        activeSlotLoaded = null;
+        activeSlotIndicator.innerText = 'Active: Imported File';
         await initializeBundle(json, file.name);
       } catch (err) {
         alert('Could not load .sfproj file: ' + err.message);
@@ -211,7 +228,7 @@
       }
     }
 
-    async function initializeBundle(bundle, filename = 'Imported Scene') {
+    async function initializeBundle(bundle, title = 'Imported Scene') {
       stopPlayback();
       currentBundle = bundle;
       decodedAudioMap.clear();
@@ -219,7 +236,6 @@
       const ctx = getAudioContext();
       engineStatus.innerText = 'Decoding audio channels...';
 
-      // Decode Base64 audio into real Web Audio buffers
       for (const track of bundle.tracks) {
         for (const clip of track.clips) {
           if (!clip.isSpeech && clip.audioData) {
@@ -228,12 +244,12 @@
               const ab = await res.arrayBuffer();
               const decoded = await ctx.decodeAudioData(ab);
               decodedAudioMap.set(clip.id, decoded);
-            } catch(e) { console.warn('Could not decode audio for clip:', clip.id, e); }
+            } catch(e) { console.warn('Could not decode clip:', clip.id, e); }
           }
         }
       }
 
-      document.getElementById('scene-title').innerText = bundle.taskName || filename.replace(/\.[^/.]+$/, "");
+      document.getElementById('scene-title').innerText = bundle.taskName || title.replace(/\.[^/.]+$/, "");
       
       let maxDuration = 0;
       bundle.tracks.forEach(t => t.clips.forEach(c => {
@@ -244,14 +260,15 @@
       document.getElementById('total-duration-display').innerText = `${maxDuration.toFixed(1)}s total scene duration`;
       btnPlayPause.disabled = false;
       btnStop.disabled = false;
+      btnOpenSaveModal.disabled = false;
 
       renderTimelineLanes();
       renderCueSheet();
       seekTo(0);
-      engineStatus.innerText = 'Ready to play';
+      engineStatus.innerText = 'Approved & Ready';
     }
 
-    /* RENDER 4 TRACK LANES */
+    /* RENDER 4 LANES */
     function renderTimelineLanes() {
       lanesWrapper.innerHTML = '';
       const totalWidth = Math.max(700, (currentBundle.totalDuration + 2) * PIXELS_PER_SECOND);
@@ -314,7 +331,7 @@
       });
     }
 
-    /* SYNCHRONIZED MULTI-CHANNEL PLAYBACK */
+    /* PLAYBACK ENGINE */
     function resolveVoice(name, lang) {
       if (!availableVoices.length) loadVoices();
       let match = availableVoices.find(v => v.name === name);
@@ -337,7 +354,6 @@
 
         track.clips.forEach(clip => {
           if (clip.start + clip.duration > playheadTime) {
-            // Track 1 Speech Synthesis
             if (clip.isSpeech && clip.speechText) {
               const delayMs = Math.max(0, (clip.start - playheadTime) * 1000);
               const tid = setTimeout(() => {
@@ -352,7 +368,6 @@
               return;
             }
 
-            // Tracks 2-4 Audio Buffer Playback
             const buf = decodedAudioMap.get(clip.id);
             if (!buf) return;
 
@@ -427,63 +442,119 @@
     }
 
     /* ==========================================================================
-       PERSISTENT MEMORY SLOTS (SLOTS 1 TO 4)
+       8 PERSISTENT MEMORY SLOTS ENGINE (SAVE TO SLOT / EMPTY SLOT / LOAD)
        ========================================================================== */
     function renderMemorySlots() {
       const container = document.getElementById('slots-grid');
       container.innerHTML = '';
 
-      for (let i = 1; i <= 4; i++) {
+      for (let i = 1; i <= TOTAL_SLOTS; i++) {
         const slotKey = `sf_player_slot_${i}`;
         const slotDataRaw = localStorage.getItem(slotKey);
         const hasData = !!slotDataRaw;
-        let slotName = 'Empty Slot';
+        let slotTitle = 'Empty';
+        let slotSub = 'No scene data';
 
         if (hasData) {
-          try { slotName = JSON.parse(slotDataRaw).taskName || `Scene ${i}`; } catch(e){}
+          try {
+            const parsed = JSON.parse(slotDataRaw);
+            slotTitle = parsed.taskName || `Scene ${i}`;
+            const dur = parsed.totalDuration ? `${parsed.totalDuration.toFixed(1)}s` : 'Scene';
+            slotSub = `${dur} • Ready`;
+          } catch(e) {}
         }
 
-        const slotEl = document.createElement('div');
-        slotEl.className = `p-2 rounded-lg border text-xs flex flex-col justify-between transition ${
-          hasData ? 'bg-[#161b22] border-cyan-800/60 hover:border-cyan-500' : 'bg-[#111620] border-[#21262d] opacity-60'
+        const isCurrentActive = (activeSlotLoaded === i);
+        const slotCard = document.createElement('div');
+        slotCard.className = `p-2.5 rounded-xl border flex flex-col justify-between transition ${
+          isCurrentActive
+            ? 'bg-cyan-950/70 border-cyan-400 ring-1 ring-cyan-400'
+            : hasData 
+              ? 'bg-[#161b22] border-[#30363d] hover:border-slate-400' 
+              : 'bg-[#111620] border-[#21262d] opacity-50'
         }`;
 
-        slotEl.innerHTML = `
-          <div class="flex items-center justify-between mb-1">
-            <span class="font-bold text-[10px] text-cyan-400 font-mono">SLOT ${i}</span>
-            <div class="flex items-center gap-1">
-              ${currentBundle ? `<button class="hover:text-emerald-400 text-[10px]" title="Save Current Scene to Slot ${i}" onclick="saveToSlot(${i})"><i class="fa-solid fa-floppy-disk"></i></button>` : ''}
-              ${hasData ? `<button class="hover:text-rose-400 text-[10px]" title="Clear Slot" onclick="clearSlot(${i})"><i class="fa-solid fa-xmark"></i></button>` : ''}
+        slotCard.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-mono text-[10px] font-bold ${isCurrentActive ? 'text-cyan-300' : 'text-cyan-400'}">SLOT ${i}</span>
+              ${hasData ? `
+                <button class="text-slate-500 hover:text-rose-400 text-[10px] transition px-1 py-0.5 rounded" title="Empty Slot ${i}" onclick="emptySlot(${i}, event)">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              ` : `
+                <span class="text-[9px] text-slate-600 font-mono">AVAILABLE</span>
+              `}
             </div>
+            <div class="text-xs font-semibold text-white truncate mb-0.5" title="${slotTitle}">${slotTitle}</div>
+            <div class="text-[10px] text-slate-400 truncate mb-2 font-mono">${slotSub}</div>
           </div>
-          <div class="truncate text-[11px] font-semibold text-white mb-1.5">${slotName}</div>
-          <button class="w-full py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-cyan-300 font-bold text-[10px] disabled:opacity-30 transition" ${hasData ? '' : 'disabled'} onclick="loadFromSlot(${i})">
-            Load Slot
-          </button>
+
+          <div class="flex items-center gap-1.5 pt-1 border-t border-[#21262d]">
+            <button class="flex-1 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-cyan-300 font-bold text-[10px] transition disabled:opacity-30 disabled:cursor-not-allowed" ${hasData ? '' : 'disabled'} onclick="loadFromSlot(${i})">
+              ${isCurrentActive ? 'Reload' : 'Load'}
+            </button>
+            <button class="px-2 py-1 rounded bg-[#21262d] hover:bg-cyan-700 hover:text-white text-slate-300 text-[10px] transition" title="Overwrite Slot ${i} with Current Scene" onclick="saveToSlot(${i})">
+              <i class="fa-solid fa-floppy-disk"></i>
+            </button>
+          </div>
         `;
-        container.appendChild(slotEl);
+
+        container.appendChild(slotCard);
       }
     }
 
+    // Direct Save into Specified Slot
     window.saveToSlot = function(slotNumber) {
-      if (!currentBundle) return;
+      if (!currentBundle) {
+        alert('Please load an approved scene before saving to a slot.');
+        return;
+      }
       localStorage.setItem(`sf_player_slot_${slotNumber}`, JSON.stringify(currentBundle));
+      activeSlotLoaded = slotNumber;
+      activeSlotIndicator.innerText = `Active: Slot ${slotNumber}`;
       renderMemorySlots();
-      alert(`Current scene saved into Slot ${slotNumber}!`);
+      engineStatus.innerText = `Saved into Slot ${slotNumber}`;
     };
 
+    // Dedicated Save Button Action (Prompts slot target)
+    btnOpenSaveModal.onclick = () => {
+      if (!currentBundle) return;
+      const slotChoice = prompt(`Enter memory slot number to save this scene into (1 to ${TOTAL_SLOTS}):`, activeSlotLoaded || "1");
+      const num = parseInt(slotChoice, 10);
+      if (num >= 1 && num <= TOTAL_SLOTS) {
+        saveToSlot(num);
+      } else if (slotChoice !== null) {
+        alert(`Invalid slot. Please choose a number between 1 and ${TOTAL_SLOTS}.`);
+      }
+    };
+
+    // Load from Specified Slot
     window.loadFromSlot = function(slotNumber) {
       const dataRaw = localStorage.getItem(`sf_player_slot_${slotNumber}`);
       if (!dataRaw) return;
       try {
         const bundle = JSON.parse(dataRaw);
-        initializeBundle(bundle, `Memory Slot ${slotNumber}`);
-      } catch(e) { alert('Could not load slot data.'); }
+        activeSlotLoaded = slotNumber;
+        activeSlotIndicator.innerText = `Active: Slot ${slotNumber}`;
+        initializeBundle(bundle, `Slot ${slotNumber} Scene`);
+        renderMemorySlots();
+      } catch(e) {
+        alert('Could not parse data from this memory slot.');
+      }
     };
 
-    window.clearSlot = function(slotNumber) {
-      localStorage.removeItem(`sf_player_slot_${slotNumber}`);
-      renderMemorySlots();
+    // Empty / Delete Slot
+    window.emptySlot = function(slotNumber, e) {
+      if (e) e.stopPropagation();
+      if (confirm(`Empty Memory Slot ${slotNumber}?`)) {
+        localStorage.removeItem(`sf_player_slot_${slotNumber}`);
+        if (activeSlotLoaded === slotNumber) {
+          activeSlotLoaded = null;
+          activeSlotIndicator.innerText = 'Active: None';
+        }
+        renderMemorySlots();
+      }
     };
 
     window.addEventListener('DOMContentLoaded', () => {
