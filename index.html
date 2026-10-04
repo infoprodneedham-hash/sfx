@@ -1,554 +1,364 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SonicForge DAW - Sound Effects & Audio Workstation Studio</title>
-  <!-- Tailwind CSS CDN -->
+  <title>SoundForge Audio Workstation</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- LameJS MP3 Encoder CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
-  <!-- FontAwesome 6 Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' },
-            panel: { 800: '#1e2230', 850: '#151824', 900: '#0d101a', 950: '#07090f' }
-          },
-          fontFamily: {
-            mono: ['JetBrains Mono', 'Menlo', 'Courier New', 'monospace']
-          }
-        }
-      }
-    };
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
   <style>
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #07090f; }
-    ::-webkit-scrollbar-thumb { background: #252b3d; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #3c4664; }
+    body { background-color: #0d1117; color: #c9d1d9; font-family: system-ui, -apple-system, sans-serif; user-select: none; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #161b22; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #484f58; }
     .timeline-grid {
       background-size: 50px 100%;
-      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
     }
-    .clip-block {
-      user-select: none;
-      touch-action: none;
-      transition: box-shadow 0.15s ease, transform 0.05s ease;
-    }
-    .clip-block:hover {
-      box-shadow: 0 0 14px rgba(99, 102, 241, 0.5);
-    }
-    .lane-hover-target {
-      background-color: rgba(99, 102, 241, 0.12) !important;
-      outline: 2px dashed rgba(129, 140, 248, 0.75) !important;
-    }
+    .clip-item { transition: box-shadow 0.15s ease, transform 0.05s ease; cursor: grab; }
+    .clip-item:active { cursor: grabbing; box-shadow: 0 0 12px rgba(56, 189, 248, 0.7); }
+    .clip-handle { cursor: ew-resize; }
   </style>
 </head>
-<body class="bg-panel-950 text-slate-100 min-h-screen flex flex-col font-sans select-none overflow-x-hidden">
+<body class="h-screen flex flex-col overflow-hidden">
 
-  <header class="bg-panel-900 border-b border-slate-800 px-3 py-2 flex flex-wrap items-center justify-between gap-3 z-30 sticky top-0 shadow-lg">
-    <!-- Brand Title -->
+  <!-- TOP HEADER / TRANSPORT BAR -->
+  <header class="h-16 bg-[#161b22] border-b border-[#30363d] flex items-center justify-between px-5 flex-shrink-0 z-20">
     <div class="flex items-center space-x-3">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-        <i class="fa-solid fa-wave-square text-white text-base"></i>
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-900/30">
+        <i class="fa-solid fa-compact-disc text-white text-xl animate-spin-slow"></i>
       </div>
       <div>
-        <div class="flex items-center gap-2">
-          <h1 class="text-sm md:text-base font-bold bg-gradient-to-r from-white via-indigo-200 to-cyan-300 bg-clip-text text-transparent">SonicForge DAW</h1>
-          <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">Studio Pro</span>
-        </div>
-        <p class="text-[11px] text-slate-400">4-Track Multi-Clip Audio & Speech Workstation</p>
+        <h1 class="font-bold text-base text-white tracking-wide flex items-center gap-2">
+          SoundForge DAW <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v4.0 PRO</span>
+        </h1>
+        <p class="text-xs text-slate-400" id="current-task-display">Active Task: Task 1</p>
       </div>
     </div>
 
-    <!-- Stepped Transport Controls -->
-    <div class="flex items-center bg-panel-850 px-2 py-1.5 rounded-2xl border border-slate-800 shadow-inner flex-wrap gap-1">
-      <button id="btn-jump-start" title="Jump to 0:00 (Home)" class="w-7 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-xs">
-        <i class="fa-solid fa-backward-step"></i>
+    <!-- Stepped Transport Navigation -->
+    <div class="flex items-center space-x-2 bg-[#0d1117] p-1.5 rounded-xl border border-[#30363d]">
+      <button id="btn-jump-start" title="Jump to Start (Home)" class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center justify-center transition">
+        <i class="fa-solid fa-backward-step text-sm"></i>
       </button>
-      <button id="btn-step-back-5" title="Rewind 5s (Shift + Left Arrow)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
-        <i class="fa-solid fa-angles-left mr-0.5 text-[9px]"></i>5s
+      <button id="btn-step-back-5" title="Step Back 5s (Shift+Left)" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
+        <i class="fa-solid fa-angles-left text-xs"></i> 5s
       </button>
-      <button id="btn-step-back-1" title="Rewind 1s (Left Arrow)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
-        <i class="fa-solid fa-chevron-left mr-0.5 text-[9px]"></i>1s
-      </button>
-
-      <!-- Center Play/Pause -->
-      <button id="btn-play" title="Play / Pause (Space)" class="w-9 h-9 rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 text-white font-bold flex items-center justify-center shadow-lg shadow-indigo-500/30 transition transform active:scale-95 mx-1">
-        <i id="play-icon" class="fa-solid fa-play ml-0.5 text-xs"></i>
+      <button id="btn-step-back-1" title="Step Back 1s (Left Arrow)" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
+        <i class="fa-solid fa-chevron-left text-xs"></i> 1s
       </button>
 
-      <button id="btn-step-fwd-1" title="Forward 1s (Right Arrow)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
-        1s<i class="fa-solid fa-chevron-right ml-0.5 text-[9px]"></i>
-      </button>
-      <button id="btn-step-fwd-5" title="Forward 5s (Shift + Right Arrow)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
-        5s<i class="fa-solid fa-angles-right ml-0.5 text-[9px]"></i>
-      </button>
-      <button id="btn-jump-end" title="Jump to End of Clips (End)" class="w-7 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-xs">
-        <i class="fa-solid fa-forward-step"></i>
+      <button id="btn-play-pause" title="Play/Pause (Space)" class="w-10 h-10 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold flex items-center justify-center transition shadow-md shadow-cyan-500/20 mx-1">
+        <i class="fa-solid fa-play text-base" id="play-pause-icon"></i>
       </button>
 
-      <div class="h-5 w-px bg-slate-700 mx-1"></div>
+      <button id="btn-step-fwd-1" title="Step Forward 1s (Right Arrow)" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
+        1s <i class="fa-solid fa-chevron-right text-xs"></i>
+      </button>
+      <button id="btn-step-fwd-5" title="Step Forward 5s (Shift+Right)" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
+        5s <i class="fa-solid fa-angles-right text-xs"></i>
+      </button>
+      <button id="btn-jump-end" title="Jump to End of Timeline (End)" class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center justify-center transition">
+        <i class="fa-solid fa-forward-step text-sm"></i>
+      </button>
 
-      <!-- Timecode Readout -->
-      <div class="flex items-baseline space-x-1 font-mono text-cyan-400 bg-panel-950 px-2.5 py-1 rounded-lg border border-slate-800">
-        <span id="timecode-display" class="text-xs font-semibold tracking-wider">00:00.00</span>
-        <span class="text-[9px] text-slate-500">/ 03:00.00</span>
+      <div class="h-6 w-px bg-[#30363d] mx-2"></div>
+
+      <!-- Time Display -->
+      <div class="font-mono text-cyan-400 font-bold px-3 text-sm tracking-wider" id="time-display">
+        00:00.00 <span class="text-slate-500 text-xs font-normal">/ 03:00.00</span>
       </div>
     </div>
 
-    <!-- Export WAV & MP3 Buttons -->
+    <!-- Export & Audio Import Menu -->
     <div class="flex items-center space-x-2">
-      <div class="flex rounded-xl shadow-lg shadow-indigo-500/10 overflow-hidden border border-slate-700">
-        <button id="btn-export-wav" class="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white text-xs font-semibold transition active:scale-95">
-          <i class="fa-solid fa-file-audio"></i>
-          <span>Export WAV</span>
-        </button>
-        <button id="btn-export-mp3" class="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white text-xs font-semibold border-l border-indigo-700/50 transition active:scale-95">
-          <i class="fa-solid fa-compact-disc"></i>
-          <span>Export MP3</span>
-        </button>
-      </div>
-      <button id="btn-clear-task" title="Clear current timeline clips" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition">
-        <i class="fa-solid fa-trash-can text-sm"></i>
+      <!-- Import Audio Button -->
+      <label class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-slate-200 text-xs font-semibold rounded-lg border border-[#30363d] cursor-pointer flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-file-import text-cyan-400"></i> Import Audio
+        <input type="file" id="import-audio-input" accept="audio/*" class="hidden">
+      </label>
+
+      <!-- Export WAV -->
+      <button id="btn-export-wav" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-file-audio"></i> Export WAV
+      </button>
+
+      <!-- Export MP3 -->
+      <button id="btn-export-mp3" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-music"></i> Export MP3
       </button>
     </div>
   </header>
 
-  <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
-    
-    <!-- LEFT SIDEBAR: Tasks & Projects Manager -->
-    <aside class="w-full lg:w-64 bg-panel-900 border-b lg:border-b-0 lg:border-r border-slate-800 flex flex-col flex-shrink-0">
-      <div class="p-3 border-b border-slate-800 flex items-center justify-between">
-        <div class="flex items-center space-x-2">
-          <i class="fa-solid fa-layer-group text-indigo-400 text-sm"></i>
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Tasks & Projects</span>
-        </div>
-        <button id="btn-new-task" class="px-2.5 py-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg shadow-sm hover:shadow transition flex items-center space-x-1 active:scale-95 cursor-pointer">
-          <i class="fa-solid fa-plus text-[10px]"></i>
-          <span>New Task</span>
-        </button>
-      </div>
+  <!-- WORKSPACE BODY (SIDEBAR + MAIN CANVAS) -->
+  <div class="flex flex-1 overflow-hidden">
 
-      <!-- Task Cards Scroll List -->
-      <div id="tasks-list" class="flex-1 overflow-y-auto p-2 space-y-1.5 max-h-48 lg:max-h-none">
-        <!-- Rendered dynamically via JS -->
-      </div>
-
-      <!-- Task Stats Footer -->
-      <div class="p-2.5 border-t border-slate-800/80 bg-panel-950/60 text-[10px] text-slate-400 flex flex-col gap-1">
-        <div class="flex items-center justify-between">
-          <span id="task-clip-count">0 Clips placed</span>
-          <span class="text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-circle-check text-[9px]"></i>Saved</span>
-        </div>
-        <div class="text-[9px] text-slate-500 truncate">
-          <kbd class="px-1 bg-panel-800 rounded">←/→</kbd> 1s &bull; <kbd class="px-1 bg-panel-800 rounded">Shift+←/→</kbd> 5s &bull; <kbd class="px-1 bg-panel-800 rounded">Space</kbd> Play
-        </div>
-      </div>
-    </aside>
-
-    <!-- CENTER TIMELINE & TRACK LANES -->
-    <section class="flex-1 flex flex-col bg-panel-950 overflow-hidden relative">
-      <div class="px-4 py-1.5 bg-panel-900/90 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
-        <div class="flex items-center space-x-3">
-          <span class="font-medium text-slate-200 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span id="current-task-heading" class="font-bold text-white tracking-wide">Task 1</span>
-          </span>
-          <span class="hidden sm:inline text-slate-500">| 4 Tracks (Speech, SFX, Foley, Ambience)</span>
-        </div>
-        <div class="flex items-center space-x-2">
-          <button id="btn-zoom-out" title="Zoom Out" class="w-6 h-6 rounded bg-panel-800 hover:bg-slate-700 flex items-center justify-center text-slate-300">
-            <i class="fa-solid fa-minus text-[10px]"></i>
-          </button>
-          <button id="btn-zoom-in" title="Zoom In" class="w-6 h-6 rounded bg-panel-800 hover:bg-slate-700 flex items-center justify-center text-slate-300">
-            <i class="fa-solid fa-plus text-[10px]"></i>
-          </button>
-        </div>
-      </div>
-
-      <div class="flex-1 flex overflow-hidden">
-        <!-- Track Headers (Track 1: Speech, Track 2: SFX, Track 3: Foley, Track 4: Ambience) -->
-        <div class="w-48 md:w-56 bg-panel-900 border-r border-slate-800 flex flex-col flex-shrink-0 z-10 pt-7">
-          
-          <!-- Track 1: Speech -->
-          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-panel-900/70">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-cyan-400 flex items-center gap-1.5 truncate">
-                <i class="fa-solid fa-microphone-lines text-[11px]"></i> Track 1: Speech
-              </span>
-              <button onclick="clearTrack(0)" title="Clear Track 1" class="text-slate-500 hover:text-rose-400 text-[10px]"><i class="fa-solid fa-eraser"></i></button>
-            </div>
-            <div class="flex items-center space-x-1.5">
-              <button onclick="toggleMute(0)" id="mute-btn-0" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-white border border-slate-700">M</button>
-              <button onclick="toggleSolo(0)" id="solo-btn-0" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
-              <input type="range" min="0" max="1.5" step="0.01" value="1.0" oninput="setTrackVolume(0, this.value)" class="w-full accent-cyan-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
-            </div>
-          </div>
-
-          <!-- Track 2: SFX -->
-          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-panel-900/70">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-violet-400 flex items-center gap-1.5 truncate">
-                <i class="fa-solid fa-bolt text-[11px]"></i> Track 2: SFX
-              </span>
-              <button onclick="clearTrack(1)" title="Clear Track 2" class="text-slate-500 hover:text-rose-400 text-[10px]"><i class="fa-solid fa-eraser"></i></button>
-            </div>
-            <div class="flex items-center space-x-1.5">
-              <button onclick="toggleMute(1)" id="mute-btn-1" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-white border border-slate-700">M</button>
-              <button onclick="toggleSolo(1)" id="solo-btn-1" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
-              <input type="range" min="0" max="1.5" step="0.01" value="0.9" oninput="setTrackVolume(1, this.value)" class="w-full accent-violet-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
-            </div>
-          </div>
-
-          <!-- Track 3: Foley -->
-          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-panel-900/70">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1.5 truncate">
-                <i class="fa-solid fa-shoe-prints text-[11px]"></i> Track 3: Foley
-              </span>
-              <button onclick="clearTrack(2)" title="Clear Track 3" class="text-slate-500 hover:text-rose-400 text-[10px]"><i class="fa-solid fa-eraser"></i></button>
-            </div>
-            <div class="flex items-center space-x-1.5">
-              <button onclick="toggleMute(2)" id="mute-btn-2" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-white border border-slate-700">M</button>
-              <button onclick="toggleSolo(2)" id="solo-btn-2" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
-              <input type="range" min="0" max="1.5" step="0.01" value="0.9" oninput="setTrackVolume(2, this.value)" class="w-full accent-emerald-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
-            </div>
-          </div>
-
-          <!-- Track 4: Ambience -->
-          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-panel-900/70">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-amber-400 flex items-center gap-1.5 truncate">
-                <i class="fa-solid fa-cloud-showers-heavy text-[11px]"></i> Track 4: Ambience
-              </span>
-              <button onclick="clearTrack(3)" title="Clear Track 4" class="text-slate-500 hover:text-rose-400 text-[10px]"><i class="fa-solid fa-eraser"></i></button>
-            </div>
-            <div class="flex items-center space-x-1.5">
-              <button onclick="toggleMute(3)" id="mute-btn-3" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-white border border-slate-700">M</button>
-              <button onclick="toggleSolo(3)" id="solo-btn-3" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
-              <input type="range" min="0" max="1.5" step="0.01" value="0.8" oninput="setTrackVolume(3, this.value)" class="w-full accent-amber-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
-            </div>
-          </div>
-        </div>
-
-        <!-- Scrollable Timeline Lanes Container -->
-        <div id="timeline-scroll-container" class="flex-1 overflow-x-auto overflow-y-hidden relative select-none">
-          <!-- Time Ruler -->
-          <div id="timeline-ruler" class="h-7 bg-panel-900/95 border-b border-slate-800 relative cursor-pointer text-[10px] font-mono text-slate-400 select-none">
-          </div>
-
-          <!-- Playhead Line -->
-          <div id="playhead-line" class="absolute top-0 bottom-0 w-0.5 bg-cyan-400 z-30 pointer-events-none shadow-[0_0_8px_rgba(6,182,212,0.9)]" style="left: 0px;">
-            <div class="w-3.5 h-3.5 -ml-1.5 -top-0.5 bg-cyan-400 rotate-45 transform rounded-sm shadow-md"></div>
-          </div>
-
-          <!-- Track Lanes Area -->
-          <div id="tracks-lanes-wrapper" class="relative timeline-grid">
-            <div id="lane-0" data-track-index="0" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01]">
-              <span class="absolute right-4 text-xs font-mono text-slate-800 pointer-events-none uppercase font-bold tracking-wider">Track 1 &bull; Speech & Dialogue</span>
-            </div>
-            <div id="lane-1" data-track-index="1" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01]">
-              <span class="absolute right-4 text-xs font-mono text-slate-800 pointer-events-none uppercase font-bold tracking-wider">Track 2 &bull; Sound Effects</span>
-            </div>
-            <div id="lane-2" data-track-index="2" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01]">
-              <span class="absolute right-4 text-xs font-mono text-slate-800 pointer-events-none uppercase font-bold tracking-wider">Track 3 &bull; Foley & Props</span>
-            </div>
-            <div id="lane-3" data-track-index="3" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01]">
-              <span class="absolute right-4 text-xs font-mono text-slate-800 pointer-events-none uppercase font-bold tracking-wider">Track 4 &bull; Ambience & Background</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- RIGHT STUDIO PANEL: Tabs (TTS, Library, Foley/Ambience Gen, Mic/STT) -->
-    <aside class="w-full lg:w-96 bg-panel-900 border-t lg:border-t-0 lg:border-l border-slate-800 flex flex-col flex-shrink-0">
+    <!-- LEFT SIDEBAR: TASKS & SOUND GENERATOR/IMPORT -->
+    <aside class="w-80 bg-[#161b22] border-r border-[#30363d] flex flex-col flex-shrink-0">
       
-      <!-- Tab Navigation -->
-      <div class="flex border-b border-slate-800 bg-panel-950/40 p-1 gap-1 overflow-x-auto">
-        <button onclick="switchStudioTab('tts')" id="tab-btn-tts" class="flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg bg-panel-800 text-indigo-400 shadow-sm transition whitespace-nowrap">
-          <i class="fa-solid fa-comment-dots mr-1"></i> TTS Studio
-        </button>
-        <button onclick="switchStudioTab('library')" id="tab-btn-library" class="flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
-          <i class="fa-solid fa-icons mr-1"></i> SFX & Foley
-        </button>
-        <button onclick="switchStudioTab('generator')" id="tab-btn-generator" class="flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
-          <i class="fa-solid fa-sliders mr-1"></i> Ambience Gen
-        </button>
-        <button onclick="switchStudioTab('mic')" id="tab-btn-mic" class="flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
-          <i class="fa-solid fa-microphone mr-1"></i> Mic / STT
-        </button>
+      <!-- TASK MANAGER SECTION -->
+      <div class="p-3 border-b border-[#30363d]">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-list-check text-cyan-400"></i> Project Tasks
+          </span>
+          <button id="btn-add-task" class="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded flex items-center gap-1 transition">
+            <i class="fa-solid fa-plus"></i> New Task
+          </button>
+        </div>
+        <div id="task-list" class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+          <!-- Tasks dynamically rendered here -->
+        </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-3 space-y-4">
-        
-        <!-- TAB 1: TEXT-TO-SPEECH STUDIO (Natural Speech Synthesis) -->
-        <div id="panel-tts" class="space-y-4">
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="text-xs font-bold text-slate-300 uppercase tracking-wider">Voice Script</label>
-              <span class="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
-                <i class="fa-solid fa-shield-halved"></i> Clean Anti-Click Audio
-              </span>
-            </div>
-            <textarea id="tts-input" rows="3" class="w-full bg-panel-850 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 leading-relaxed" placeholder="Type text here to synthesize natural speech...">SonicForge audio workstation ready. All tracks calibrated.</textarea>
-          </div>
+      <!-- SOUNDS & PROCEDURAL GENERATORS -->
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex border-b border-[#30363d] text-xs font-semibold bg-[#0d1117]">
+          <button id="tab-btn-sfx" class="flex-1 py-2.5 text-center text-cyan-400 border-b-2 border-cyan-400 transition" onclick="switchSidebarTab('sfx')">
+            <i class="fa-solid fa-bolt mr-1"></i> Library
+          </button>
+          <button id="tab-btn-foley" class="flex-1 py-2.5 text-center text-slate-400 hover:text-white transition" onclick="switchSidebarTab('foley')">
+            <i class="fa-solid fa-shoe-prints mr-1"></i> Foley
+          </button>
+          <button id="tab-btn-ambience" class="flex-1 py-2.5 text-center text-slate-400 hover:text-white transition" onclick="switchSidebarTab('ambience')">
+            <i class="fa-solid fa-wind mr-1"></i> Ambience
+          </button>
+        </div>
 
-          <div class="space-y-3 bg-panel-850 p-3 rounded-xl border border-slate-800/80">
-            <div class="flex items-center justify-between">
-              <label class="text-[11px] font-semibold text-slate-300">Voice Profiles</label>
-              <span id="tts-status-badge" class="text-[10px] text-indigo-400 font-semibold flex items-center gap-1">
-                <i class="fa-solid fa-user-check"></i> Ready
-              </span>
-            </div>
-
-            <!-- Voice Preset Buttons -->
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              <button onclick="applyVoicePreset('male-low')" id="preset-btn-male-low" class="voice-preset-btn p-2 rounded-lg bg-panel-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
-                <div class="font-bold text-slate-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-indigo-400 text-[10px]"></i> Deep Male
-                </div>
-                <div class="text-[10px] text-slate-400">Brian Voice</div>
-              </button>
-              <button onclick="applyVoicePreset('male-med')" id="preset-btn-male-med" class="voice-preset-btn p-2 rounded-lg bg-indigo-600/30 text-left border border-indigo-500/60 transition">
-                <div class="font-bold text-indigo-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-cyan-400 text-[10px]"></i> Med Male
-                </div>
-                <div class="text-[10px] text-slate-300">Russell Voice</div>
-              </button>
-              <button onclick="applyVoicePreset('female-med')" id="preset-btn-female-med" class="voice-preset-btn p-2 rounded-lg bg-panel-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
-                <div class="font-bold text-slate-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-emerald-400 text-[10px]"></i> Med Female
-                </div>
-                <div class="text-[10px] text-slate-400">Amy Voice</div>
-              </button>
-              <button onclick="applyVoicePreset('female-high')" id="preset-btn-female-high" class="voice-preset-btn p-2 rounded-lg bg-panel-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
-                <div class="font-bold text-slate-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-rose-400 text-[10px]"></i> High Female
-                </div>
-                <div class="text-[10px] text-slate-400">Salli Voice</div>
-              </button>
-            </div>
-
-            <!-- Pitch, Rate, and Target Track Controls -->
-            <div class="space-y-2 pt-2 border-t border-slate-800 text-xs">
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="text-[10px] text-slate-400 block mb-1">Voice Selection</label>
-                  <select id="tts-voice-select" class="w-full bg-panel-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
-                    <option value="Russell" selected>Russell (Medium Male)</option>
-                    <option value="Brian">Brian (Low Male)</option>
-                    <option value="Amy">Amy (Medium Female)</option>
-                    <option value="Salli">Salli (High Female)</option>
-                    <option value="Emma">Emma (British Female)</option>
-                    <option value="Geraint">Geraint (Welsh Male)</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="text-[10px] text-slate-400 block mb-1">Target Track</label>
-                  <select id="tts-target-track" class="w-full bg-panel-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
-                    <option value="0">Track 1: Speech</option>
-                    <option value="1">Track 2: SFX</option>
-                    <option value="2">Track 3: Foley</option>
-                    <option value="3">Track 4: Ambience</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2 pt-1">
-                <div>
-                  <div class="flex justify-between text-[10px] text-slate-400">
-                    <span>Speed / Rate</span>
-                    <span id="label-tts-rate">1.0x</span>
-                  </div>
-                  <input id="tts-rate-slider" type="range" min="0.7" max="1.5" step="0.05" value="1.0" class="w-full accent-indigo-400 h-1 bg-slate-700 rounded cursor-pointer" oninput="document.getElementById('label-tts-rate').textContent = this.value + 'x'">
-                </div>
-                <div>
-                  <div class="flex justify-between text-[10px] text-slate-400">
-                    <span>Pitch</span>
-                    <span id="label-tts-pitch">1.0x</span>
-                  </div>
-                  <input id="tts-pitch-slider" type="range" min="0.7" max="1.4" step="0.05" value="1.0" class="w-full accent-indigo-400 h-1 bg-slate-700 rounded cursor-pointer" oninput="document.getElementById('label-tts-pitch').textContent = this.value + 'x'">
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex items-center space-x-2">
-            <button id="btn-preview-tts" class="flex-1 py-2 px-3 bg-panel-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 flex items-center justify-center space-x-1.5 transition active:scale-95">
-              <i class="fa-solid fa-volume-high text-[11px] text-indigo-400"></i>
-              <span>Preview Voice</span>
-            </button>
-            <button id="btn-add-tts-to-track" class="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-1.5 transition active:scale-95">
-              <i class="fa-solid fa-plus text-[10px]"></i>
-              <span>Add to Timeline</span>
-            </button>
+        <!-- TAB CONTENT 1: SFX LIBRARY -->
+        <div id="tab-sfx" class="flex-1 overflow-y-auto p-3 space-y-2">
+          <div class="text-[11px] text-slate-400 mb-1">Click to preview, or add directly to target track:</div>
+          <div id="sfx-items-container" class="space-y-2">
+            <!-- Rendered by JS -->
           </div>
         </div>
 
-        <!-- TAB 2: SOUND EFFECTS & FOLEY LIBRARY -->
-        <div id="panel-library" class="hidden space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Audio Presets Library</h3>
-            <span class="text-[10px] text-slate-500">Drag card or pick track</span>
+        <!-- TAB CONTENT 2: PROCEDURAL FOLEY GENERATOR -->
+        <div id="tab-foley" class="flex-1 overflow-y-auto p-3 space-y-3 hidden">
+          <div class="text-[11px] text-slate-400">Custom mechanical & acoustic Foley simulator:</div>
+          
+          <div class="bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d]">
+            <label class="text-xs font-semibold text-slate-300 block mb-1">Foley Material / Action</label>
+            <select id="foley-type-select" class="w-full bg-[#161b22] border border-[#30363d] rounded p-1.5 text-xs text-white">
+              <option value="footsteps">Concrete Footsteps</option>
+              <option value="woodcreak">Wood Floor Creak</option>
+              <option value="door">Heavy Door Slam</option>
+              <option value="cloth">Cloth / Leather Rustle</option>
+              <option value="impact">Punch / Blunt Impact</option>
+              <option value="glass">Glass Shutter</option>
+            </select>
           </div>
 
-          <!-- Category Filter Buttons -->
-          <div class="flex gap-1.5">
-            <button onclick="filterLibraryCategory('all')" id="cat-btn-all" class="px-2.5 py-1 text-[11px] rounded-lg bg-indigo-600 text-white font-medium">All</button>
-            <button onclick="filterLibraryCategory('sfx')" id="cat-btn-sfx" class="px-2.5 py-1 text-[11px] rounded-lg bg-panel-850 text-slate-400 hover:text-white">SFX</button>
-            <button onclick="filterLibraryCategory('foley')" id="cat-btn-foley" class="px-2.5 py-1 text-[11px] rounded-lg bg-panel-850 text-slate-400 hover:text-white">Foley</button>
-            <button onclick="filterLibraryCategory('ambience')" id="cat-btn-ambience" class="px-2.5 py-1 text-[11px] rounded-lg bg-panel-850 text-slate-400 hover:text-white">Ambience</button>
-          </div>
-
-          <div id="library-cards-container" class="space-y-2">
-            <!-- Injected dynamically -->
-          </div>
-        </div>
-
-        <!-- TAB 3: AMBIENCE & FOLEY GENERATOR -->
-        <div id="panel-generator" class="hidden space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Procedural Generator</h3>
-            <span class="text-[10px] text-amber-400 font-mono">Algorithmic</span>
-          </div>
-
-          <div class="bg-panel-850 p-3 rounded-xl border border-slate-800 space-y-3">
+          <div class="bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d] space-y-2">
             <div>
-              <label class="text-[11px] font-semibold text-slate-300">Ambience Type</label>
-              <select id="gen-type" class="mt-1 w-full bg-panel-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
-                <option value="rain">Continuous Gentle Rain</option>
-                <option value="wind">Mountain Wind Howl</option>
-                <option value="drone">Deep Cosmic Sub-Drone</option>
-                <option value="vinyl">Vintage Vinyl Crackle & Warmth</option>
-                <option value="steps">Wood Footsteps Cadence</option>
-              </select>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="text-[10px] text-slate-400 flex justify-between">
-                  <span>Duration</span>
-                  <span id="label-gen-dur">10s</span>
-                </label>
-                <input id="gen-duration" type="range" min="3" max="30" step="1" value="10" class="w-full h-1 bg-slate-700 accent-amber-400 rounded cursor-pointer" oninput="document.getElementById('label-gen-dur').textContent = this.value + 's'">
+              <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>Damping / Softness</span>
+                <span id="foley-param-val">Medium</span>
               </div>
-              <div>
-                <label class="text-[10px] text-slate-400 flex justify-between">
-                  <span>Tone / Filter</span>
-                  <span id="label-gen-tone">65%</span>
-                </label>
-                <input id="gen-tone" type="range" min="10" max="100" step="1" value="65" class="w-full h-1 bg-slate-700 accent-amber-400 rounded cursor-pointer" oninput="document.getElementById('label-gen-tone').textContent = this.value + '%'">
-              </div>
+              <input type="range" id="foley-damp" min="100" max="4000" value="1200" class="w-full accent-cyan-400">
             </div>
-
-            <div>
-              <label class="text-[10px] text-slate-400 block mb-1">Target Timeline Track</label>
-              <select id="gen-target-track" class="w-full bg-panel-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
-                <option value="3">Track 4: Ambience</option>
-                <option value="2">Track 3: Foley</option>
-                <option value="1">Track 2: SFX</option>
-                <option value="0">Track 1: Speech</option>
-              </select>
-            </div>
-
-            <div class="flex space-x-2 pt-1">
-              <button id="btn-preview-gen" class="flex-1 py-1.5 bg-panel-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700">
+            <div class="flex gap-2 pt-2">
+              <button id="btn-preview-foley" class="flex-1 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold rounded text-slate-200">
                 <i class="fa-solid fa-play mr-1"></i> Preview
               </button>
-              <button id="btn-add-gen" class="flex-1 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg shadow">
-                <i class="fa-solid fa-plus mr-1"></i> Add to Track
+              <button id="btn-add-foley" class="flex-1 py-1.5 bg-amber-600 hover:bg-amber-500 text-xs font-bold rounded text-white">
+                <i class="fa-solid fa-plus mr-1"></i> Put on Track 3
               </button>
             </div>
           </div>
         </div>
 
-        <!-- TAB 4: MICROPHONE & SPEECH-TO-TEXT -->
-        <div id="panel-mic" class="hidden space-y-4">
-          <div class="bg-panel-850 p-4 rounded-xl border border-slate-800 text-center space-y-3">
-            <div class="w-14 h-14 mx-auto rounded-full bg-slate-800/80 border-2 border-slate-700 flex items-center justify-center relative">
-              <i id="mic-status-icon" class="fa-solid fa-microphone text-lg text-slate-400"></i>
-              <div id="mic-pulse" class="hidden absolute inset-0 rounded-full border-2 border-rose-500 animate-ping"></div>
-            </div>
+        <!-- TAB CONTENT 3: AMBIENCE & DRONE GENERATOR -->
+        <div id="tab-ambience" class="flex-1 overflow-y-auto p-3 space-y-3 hidden">
+          <div class="text-[11px] text-slate-400">Generative endless background environments:</div>
+          
+          <div class="bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d]">
+            <label class="text-xs font-semibold text-slate-300 block mb-1">Environment Tone</label>
+            <select id="ambience-type-select" class="w-full bg-[#161b22] border border-[#30363d] rounded p-1.5 text-xs text-white">
+              <option value="rain">Heavy Rainfall & Thunder</option>
+              <option value="wind">Mountain Wind Howl</option>
+              <option value="space">Deep Cosmic Drone</option>
+              <option value="vinyl">Vintage Vinyl Crackle</option>
+              <option value="office">Room Air Hum</option>
+            </select>
+          </div>
 
+          <div class="bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d] space-y-2">
             <div>
-              <h4 id="mic-status-text" class="text-xs font-bold text-slate-200">Microphone Standby</h4>
-              <p class="text-[10px] text-slate-400 mt-0.5">Record up to 3 minutes directly into an AudioBuffer</p>
+              <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>Clip Duration</span>
+                <span id="ambience-dur-label">15 seconds</span>
+              </div>
+              <input type="range" id="ambience-dur" min="5" max="60" step="5" value="15" class="w-full accent-cyan-400" oninput="document.getElementById('ambience-dur-label').innerText = this.value + ' seconds'">
             </div>
-
-            <div class="flex justify-center space-x-2 pt-1">
-              <button id="btn-record-mic" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-rose-600/30 flex items-center space-x-2 transition">
-                <i class="fa-solid fa-circle text-[10px]"></i>
-                <span id="record-btn-text">Start Recording</span>
+            <div class="flex gap-2 pt-2">
+              <button id="btn-preview-ambience" class="flex-1 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-xs font-semibold rounded text-slate-200">
+                <i class="fa-solid fa-play mr-1"></i> Preview
               </button>
-            </div>
-            
-            <div id="rec-timer" class="hidden font-mono text-xs text-rose-400 font-bold">
-              00:00.00
-            </div>
-          </div>
-
-          <!-- Speech-to-Text Live Transcript -->
-          <div class="space-y-2">
-            <div class="flex items-center justify-between">
-              <label class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <i class="fa-solid fa-quote-left text-indigo-400"></i> STT Transcript
-              </label>
-              <button id="btn-toggle-stt" class="text-[10px] px-2 py-0.5 rounded bg-panel-800 text-cyan-400 border border-slate-700 hover:bg-panel-700">
-                <i class="fa-solid fa-satellite-dish mr-1"></i><span id="stt-status-label">Start STT</span>
-              </button>
-            </div>
-            <div id="stt-output-box" class="w-full min-h-[65px] max-h-32 overflow-y-auto bg-panel-850 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 italic">
-              Spoken words will transcribe live here...
-            </div>
-            
-            <button id="btn-convert-stt-tts" class="w-full py-1.5 px-2 bg-panel-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium rounded-lg border border-slate-700 flex items-center justify-center gap-1.5 transition">
-              <i class="fa-solid fa-arrow-turn-down text-indigo-400"></i>
-              <span>Send Transcript to TTS Studio</span>
-            </button>
-          </div>
-
-          <!-- Recorded Audio Actions -->
-          <div id="recorded-audio-actions" class="hidden bg-panel-850 p-3 rounded-xl border border-slate-800 space-y-2">
-            <div class="text-[11px] font-semibold text-emerald-400 flex items-center gap-1.5">
-              <i class="fa-solid fa-check-circle"></i> Audio Recorded Successfully!
-            </div>
-            <div class="flex items-center space-x-2">
-              <select id="mic-target-track" class="w-1/2 bg-panel-900 border border-slate-700 rounded-lg p-1 text-xs text-slate-200">
-                <option value="0">Track 1: Speech</option>
-                <option value="1">Track 2: SFX</option>
-                <option value="2">Track 3: Foley</option>
-                <option value="3">Track 4: Ambience</option>
-              </select>
-              <button id="btn-add-mic-to-track" class="w-1/2 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs text-white font-medium rounded-lg shadow">
-                <i class="fa-solid fa-plus mr-1"></i> Add to Track
+              <button id="btn-add-ambience" class="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded text-white">
+                <i class="fa-solid fa-plus mr-1"></i> Put on Track 4
               </button>
             </div>
           </div>
-
         </div>
 
       </div>
-    </aside>
-  </main>
 
-  <!-- Notification Toast -->
-  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-panel-850 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl shadow-2xl flex items-center space-x-2.5 pointer-events-none text-xs">
-    <i id="toast-icon" class="fa-solid fa-info-circle text-cyan-400"></i>
-    <span id="toast-message">Notification</span>
+      <!-- SPEECH / AUDIO IMPORT QUICK DROPZONE -->
+      <div class="p-3 bg-[#0d1117] border-t border-[#30363d]">
+        <div id="dropzone" class="border-2 border-dashed border-[#30363d] hover:border-cyan-500 rounded-lg p-3 text-center cursor-pointer transition">
+          <i class="fa-solid fa-cloud-arrow-up text-cyan-400 text-lg mb-1 block"></i>
+          <span class="text-xs font-semibold text-slate-300 block">Drop Speech or Audio Files</span>
+          <span class="text-[10px] text-slate-500">Supports WAV, MP3, OGG, WebM</span>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT MAIN CANVAS: TIMELINE & MULTI-TRACK MIXER -->
+    <main class="flex-1 flex flex-col bg-[#090d13] overflow-hidden">
+      
+      <!-- TIMELINE RULER -->
+      <div class="h-8 bg-[#161b22] border-b border-[#30363d] flex items-center relative pl-48 select-none overflow-hidden" id="ruler-container">
+        <canvas id="ruler-canvas" class="w-full h-full block cursor-pointer"></canvas>
+      </div>
+
+      <!-- TRACKS CONTAINER -->
+      <div class="flex-1 overflow-y-auto relative" id="tracks-scroll-area">
+        
+        <!-- Interactive Playhead Line -->
+        <div id="playhead" class="absolute top-0 bottom-0 w-[2px] bg-rose-500 z-30 pointer-events-none" style="left: 192px;">
+          <div class="w-3 h-3 bg-rose-500 rounded-full -ml-[5px] -mt-1 shadow-sm shadow-rose-500"></div>
+        </div>
+
+        <div class="space-y-1.5 p-2" id="tracks-wrapper">
+
+          <!-- TRACK 1: SPEECH & DIALOGUE -->
+          <div class="h-28 bg-[#161b22] rounded-lg border border-[#30363d] flex relative overflow-hidden track-lane" data-track-id="0">
+            <!-- Track Control Header -->
+            <div class="w-48 bg-[#0d1117] border-r border-[#30363d] p-2 flex flex-col justify-between flex-shrink-0 z-10">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-cyan-400 flex items-center gap-1.5 truncate">
+                  <i class="fa-solid fa-microphone"></i> Track 1: Speech
+                </span>
+                <span class="text-[10px] bg-cyan-950 text-cyan-300 px-1 rounded font-mono">T1</span>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between gap-1">
+                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleMute(0)">MUTE</button>
+                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleSolo(0)">SOLO</button>
+                  <button class="w-6 py-0.5 rounded text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300" onclick="clearTrack(0)" title="Clear Track"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-volume-low text-[10px] text-slate-400"></i>
+                  <input type="range" class="w-full h-1 accent-cyan-400 volume-slider" min="0" max="1" step="0.05" value="1" oninput="setTrackVolume(0, this.value)">
+                </div>
+              </div>
+            </div>
+            <!-- Track Lane Blocks -->
+            <div class="flex-1 relative timeline-grid h-full overflow-hidden track-drop-target" data-track-id="0"></div>
+          </div>
+
+          <!-- TRACK 2: SOUND EFFECTS -->
+          <div class="h-28 bg-[#161b22] rounded-lg border border-[#30363d] flex relative overflow-hidden track-lane" data-track-id="1">
+            <div class="w-48 bg-[#0d1117] border-r border-[#30363d] p-2 flex flex-col justify-between flex-shrink-0 z-10">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5 truncate">
+                  <i class="fa-solid fa-bolt"></i> Track 2: SFX
+                </span>
+                <span class="text-[10px] bg-amber-950 text-amber-300 px-1 rounded font-mono">T2</span>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between gap-1">
+                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleMute(1)">MUTE</button>
+                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleSolo(1)">SOLO</button>
+                  <button class="w-6 py-0.5 rounded text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300" onclick="clearTrack(1)" title="Clear Track"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-volume-low text-[10px] text-slate-400"></i>
+                  <input type="range" class="w-full h-1 accent-amber-400 volume-slider" min="0" max="1" step="0.05" value="0.9" oninput="setTrackVolume(1, this.value)">
+                </div>
+              </div>
+            </div>
+            <div class="flex-1 relative timeline-grid h-full overflow-hidden track-drop-target" data-track-id="1"></div>
+          </div>
+
+          <!-- TRACK 3: FOLEY -->
+          <div class="h-28 bg-[#161b22] rounded-lg border border-[#30363d] flex relative overflow-hidden track-lane" data-track-id="2">
+            <div class="w-48 bg-[#0d1117] border-r border-[#30363d] p-2 flex flex-col justify-between flex-shrink-0 z-10">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-orange-400 flex items-center gap-1.5 truncate">
+                  <i class="fa-solid fa-shoe-prints"></i> Track 3: Foley
+                </span>
+                <span class="text-[10px] bg-orange-950 text-orange-300 px-1 rounded font-mono">T3</span>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between gap-1">
+                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleMute(2)">MUTE</button>
+                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleSolo(2)">SOLO</button>
+                  <button class="w-6 py-0.5 rounded text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300" onclick="clearTrack(2)" title="Clear Track"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-volume-low text-[10px] text-slate-400"></i>
+                  <input type="range" class="w-full h-1 accent-orange-400 volume-slider" min="0" max="1" step="0.05" value="0.8" oninput="setTrackVolume(2, this.value)">
+                </div>
+              </div>
+            </div>
+            <div class="flex-1 relative timeline-grid h-full overflow-hidden track-drop-target" data-track-id="2"></div>
+          </div>
+
+          <!-- TRACK 4: AMBIENCE & MUSIC -->
+          <div class="h-28 bg-[#161b22] rounded-lg border border-[#30363d] flex relative overflow-hidden track-lane" data-track-id="3">
+            <div class="w-48 bg-[#0d1117] border-r border-[#30363d] p-2 flex flex-col justify-between flex-shrink-0 z-10">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5 truncate">
+                  <i class="fa-solid fa-wind"></i> Track 4: Ambience
+                </span>
+                <span class="text-[10px] bg-emerald-950 text-emerald-300 px-1 rounded font-mono">T4</span>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between gap-1">
+                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleMute(3)">MUTE</button>
+                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleSolo(3)">SOLO</button>
+                  <button class="w-6 py-0.5 rounded text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300" onclick="clearTrack(3)" title="Clear Track"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-volume-low text-[10px] text-slate-400"></i>
+                  <input type="range" class="w-full h-1 accent-emerald-400 volume-slider" min="0" max="1" step="0.05" value="0.75" oninput="setTrackVolume(3, this.value)">
+                </div>
+              </div>
+            </div>
+            <div class="flex-1 relative timeline-grid h-full overflow-hidden track-drop-target" data-track-id="3"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- FOOTER STATUS & SHORTCUT HINTS -->
+      <footer class="h-8 bg-[#161b22] border-t border-[#30363d] px-4 flex items-center justify-between text-xs text-slate-400 flex-shrink-0">
+        <div class="flex items-center space-x-4">
+          <span><kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">Space</kbd> Play/Pause</span>
+          <span><kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">&larr;</kbd>/<kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">&rarr;</kbd> Step 1s</span>
+          <span><kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">Shift</kbd>+<kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">&larr;/&rarr;</kbd> Step 5s</span>
+          <span><kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">Del</kbd> Remove selected clip</span>
+        </div>
+        <div id="export-status" class="text-cyan-400 font-medium">Ready</div>
+      </footer>
+
+    </main>
   </div>
 
+  <!-- SCRIPT LOGIC -->
   <script>
-    const MAX_DURATION_SEC = 180; // 3 minutes timeline maximum
-    const PIXELS_PER_SECOND_BASE = 14;
-    let currentZoom = 1.0;
-    
+    /* ==========================================================================
+       GLOBAL STATE & CONFIGURATION
+       ========================================================================== */
+    const MAX_DURATION = 180; // 3 minutes in seconds
+    const PIXELS_PER_SECOND = 20; // 1 second = 20 pixels
+    const TOTAL_WIDTH = MAX_DURATION * PIXELS_PER_SECOND; // 3600px width
+
     let audioCtx = null;
     function getAudioContext() {
       if (!audioCtx) {
@@ -560,1626 +370,867 @@
       return audioCtx;
     }
 
-    const STORAGE_KEY = 'sonicforge_daw_tasks_v6';
-
-    let state = {
-      tasks: [],
-      currentTaskId: null,
-      isPlaying: false,
-      currentTime: 0,
-      playbackStartTime: 0,
-      playbackOffsetTime: 0,
-      activeSourceNodes: []
+    // Task & Clip Data Schema
+    let appState = {
+      activeTaskId: 'task_1',
+      tasks: [
+        {
+          id: 'task_1',
+          name: 'Task 1: Episode Intro',
+          tracks: [[], [], [], []] // 4 tracks
+        }
+      ],
+      trackSettings: [
+        { volume: 1.0, muted: false, solo: false },
+        { volume: 0.9, muted: false, solo: false },
+        { volume: 0.8, muted: false, solo: false },
+        { volume: 0.75, muted: false, solo: false }
+      ]
     };
 
-    const trackControls = [
-      { volume: 1.0, muted: false, solo: false }, // Track 1: Speech
-      { volume: 0.9, muted: false, solo: false }, // Track 2: SFX
-      { volume: 0.9, muted: false, solo: false }, // Track 3: Foley
-      { volume: 0.8, muted: false, solo: false }  // Track 4: Ambience
-    ];
+    // Buffer store for synthesized/imported clips
+    const bufferRegistry = new Map();
+    let isPlaying = false;
+    let playheadTime = 0;
+    let playbackStartTime = 0;
+    let activeNodes = [];
+    let animationFrameId = null;
+    let selectedClip = null;
 
-    // In-memory registry for master audio buffers (speech, recordings, algorithmic sounds)
-    window.clipBufferRegistry = {};
-    const ttsAudioBufferCache = new Map();
-
-    function createDefaultTask(name) {
-      return {
-        id: 'task_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-        name: name || ('Task ' + (state.tasks.length + 1)),
-        createdAt: new Date().toISOString(),
-        tracks: [
-          [], // Track 0: Speech
-          [], // Track 1: SFX
-          [], // Track 2: Foley
-          []  // Track 3: Ambience
-        ]
-      };
-    }
-
-    function getCurrentTask() {
-      return state.tasks.find(t => t.id === state.currentTaskId) || null;
-    }
-
-    function saveToStorage() {
+    /* ==========================================================================
+       LOCAL STORAGE PERSISTENCE
+       ========================================================================== */
+    function saveToLocalStorage() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
+        const payload = {
+          activeTaskId: appState.activeTaskId,
+          tasks: appState.tasks.map(t => ({
+            id: t.id,
+            name: t.name,
+            tracks: t.tracks.map(track => track.map(c => ({
+              id: c.id,
+              name: c.name,
+              start: c.start,
+              duration: c.duration,
+              color: c.color,
+              bufferKey: c.bufferKey
+            })))
+          })),
+          trackSettings: appState.trackSettings
+        };
+        localStorage.setItem('soundforge_v4_state', JSON.stringify(payload));
       } catch (err) {
-        console.warn('Error saving to localStorage:', err);
+        console.warn('LocalStorage save failed:', err);
       }
-      updateTaskClipStats();
+    }
+
+    function loadFromLocalStorage() {
+      const data = localStorage.getItem('soundforge_v4_state');
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed && parsed.tasks && parsed.tasks.length > 0) {
+            appState.tasks = parsed.tasks;
+            appState.activeTaskId = parsed.activeTaskId || parsed.tasks[0].id;
+            if (parsed.trackSettings) appState.trackSettings = parsed.trackSettings;
+          }
+        } catch (e) {
+          console.error('Failed to parse state:', e);
+        }
+      }
+    }
+
+    /* ==========================================================================
+       TASK MANAGEMENT OPERATIONS (ADD, SWITCH, RENAME, DUPLICATE, DELETE)
+       ========================================================================== */
+    function renderTasks() {
+      const listEl = document.getElementById('task-list');
+      listEl.innerHTML = '';
+
+      appState.tasks.forEach(task => {
+        const isActive = task.id === appState.activeTaskId;
+        const taskCard = document.createElement('div');
+        taskCard.className = `p-2 rounded-lg border text-xs flex items-center justify-between group transition ${
+          isActive 
+            ? 'bg-cyan-950/40 border-cyan-500 text-white font-semibold' 
+            : 'bg-[#0d1117] border-[#30363d] text-slate-400 hover:text-slate-200 hover:border-slate-500 cursor-pointer'
+        }`;
+
+        taskCard.innerHTML = `
+          <div class="flex items-center gap-2 truncate flex-1" onclick="switchTask('${task.id}')">
+            <i class="fa-solid fa-folder${isActive ? '-open text-cyan-400' : ''}"></i>
+            <span class="truncate">${task.name}</span>
+          </div>
+          <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition ml-2">
+            <button class="p-1 hover:text-cyan-400" title="Rename" onclick="renameTask('${task.id}', event)">
+              <i class="fa-solid fa-pen text-[10px]"></i>
+            </button>
+            <button class="p-1 hover:text-indigo-400" title="Duplicate" onclick="duplicateTask('${task.id}', event)">
+              <i class="fa-solid fa-copy text-[10px]"></i>
+            </button>
+            <button class="p-1 hover:text-rose-400" title="Delete" onclick="deleteTask('${task.id}', event)">
+              <i class="fa-solid fa-trash text-[10px]"></i>
+            </button>
+          </div>
+        `;
+        listEl.appendChild(taskCard);
+      });
+
+      const current = appState.tasks.find(t => t.id === appState.activeTaskId) || appState.tasks[0];
+      document.getElementById('current-task-display').innerText = `Active Task: ${current ? current.name : ''}`;
     }
 
     function addNewTask() {
-      pausePlayback();
-      const taskNumber = state.tasks.length + 1;
-      const newTask = createDefaultTask(`Task ${taskNumber}`);
-      state.tasks.push(newTask);
-      state.currentTaskId = newTask.id;
-      state.currentTime = 0;
-      state.playbackOffsetTime = 0;
-
-      saveToStorage();
-      renderTasksList();
-      updateTaskHeading();
-      renderTimelineClips();
-      updatePlayheadPosition();
-      showToast(`Created & switched to ${newTask.name}`, 'success');
+      stopPlayback();
+      const count = appState.tasks.length + 1;
+      const newId = 'task_' + Date.now();
+      appState.tasks.push({
+        id: newId,
+        name: `Task ${count}: Unnamed Session`,
+        tracks: [[], [], [], []]
+      });
+      appState.activeTaskId = newId;
+      seekTo(0);
+      renderTasks();
+      renderTimeline();
+      saveToLocalStorage();
     }
 
     function switchTask(taskId) {
-      if (state.currentTaskId === taskId) return;
-      pausePlayback();
-      state.currentTaskId = taskId;
-      state.currentTime = 0;
-      state.playbackOffsetTime = 0;
+      if (appState.activeTaskId === taskId) return;
+      stopPlayback();
+      appState.activeTaskId = taskId;
+      seekTo(0);
+      renderTasks();
+      renderTimeline();
+      saveToLocalStorage();
+    }
 
-      renderTasksList();
-      updateTaskHeading();
-      renderTimelineClips();
-      updatePlayheadPosition();
-      const cur = getCurrentTask();
-      if (cur) {
-        showToast(`Loaded ${cur.name}`, 'info');
+    function renameTask(taskId, e) {
+      if (e) e.stopPropagation();
+      const task = appState.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      const newName = prompt('Enter new task name:', task.name);
+      if (newName && newName.trim()) {
+        task.name = newName.trim();
+        renderTasks();
+        saveToLocalStorage();
       }
     }
 
-    function renameTask(taskId, currentName, event) {
-      if (event) event.stopPropagation();
-      const newName = prompt('Enter new task name:', currentName);
-      if (newName && newName.trim() !== '') {
-        const task = state.tasks.find(t => t.id === taskId);
-        if (task) {
-          task.name = newName.trim();
-          saveToStorage();
-          renderTasksList();
-          updateTaskHeading();
-          showToast(`Renamed task to "${task.name}"`, 'success');
-        }
-      }
-    }
+    function duplicateTask(taskId, e) {
+      if (e) e.stopPropagation();
+      const original = appState.tasks.find(t => t.id === taskId);
+      if (!original) return;
+      
+      const newId = 'task_' + Date.now();
+      const clonedTracks = original.tracks.map(track => track.map(clip => ({
+        ...clip,
+        id: 'clip_' + Math.random().toString(36).substr(2, 9)
+      })));
 
-    function duplicateTask(taskId, event) {
-      if (event) event.stopPropagation();
-      const orig = state.tasks.find(t => t.id === taskId);
-      if (!orig) return;
-
-      const dupId = 'task_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-      const clonedTracks = orig.tracks.map(trackList => 
-        trackList.map(clip => {
-          const newClipId = 'clip_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-          if (window.clipBufferRegistry[clip.id]) {
-            window.clipBufferRegistry[newClipId] = window.clipBufferRegistry[clip.id];
-          }
-          return {
-            ...clip,
-            id: newClipId
-          };
-        })
-      );
-
-      const duplicatedTask = {
-        id: dupId,
-        name: `${orig.name} (Copy)`,
-        createdAt: new Date().toISOString(),
+      appState.tasks.push({
+        id: newId,
+        name: `${original.name} (Copy)`,
         tracks: clonedTracks
-      };
-
-      state.tasks.push(duplicatedTask);
-      state.currentTaskId = dupId;
-      saveToStorage();
-      renderTasksList();
-      updateTaskHeading();
-      renderTimelineClips();
-      showToast(`Duplicated into "${duplicatedTask.name}"`, 'success');
+      });
+      appState.activeTaskId = newId;
+      renderTasks();
+      renderTimeline();
+      saveToLocalStorage();
     }
 
-    function deleteTask(taskId, event) {
-      if (event) event.stopPropagation();
-      if (state.tasks.length <= 1) {
-        showToast('Cannot delete the only remaining task', 'warning');
+    function deleteTask(taskId, e) {
+      if (e) e.stopPropagation();
+      if (appState.tasks.length <= 1) {
+        alert('You must have at least one active task in your project.');
         return;
       }
-      
-      const target = state.tasks.find(t => t.id === taskId);
-      const confirmDelete = confirm(`Are you sure you want to delete "${target ? target.name : 'this task'}"?`);
-      if (!confirmDelete) return;
+      const task = appState.tasks.find(t => t.id === taskId);
+      if (!confirm(`Are you sure you want to delete "${task.name}"?`)) return;
 
-      state.tasks = state.tasks.filter(t => t.id !== taskId);
-      if (state.currentTaskId === taskId) {
-        state.currentTaskId = state.tasks[0].id;
-        state.currentTime = 0;
-        state.playbackOffsetTime = 0;
+      stopPlayback();
+      appState.tasks = appState.tasks.filter(t => t.id !== taskId);
+      if (appState.activeTaskId === taskId) {
+        appState.activeTaskId = appState.tasks[0].id;
       }
-
-      saveToStorage();
-      renderTasksList();
-      updateTaskHeading();
-      renderTimelineClips();
-      updatePlayheadPosition();
-      showToast('Task removed', 'info');
+      seekTo(0);
+      renderTasks();
+      renderTimeline();
+      saveToLocalStorage();
     }
 
-    function renderTasksList() {
-      const listContainer = document.getElementById('tasks-list');
-      if (!listContainer) return;
-      listContainer.innerHTML = '';
-
-      state.tasks.forEach((task) => {
-        const isActive = task.id === state.currentTaskId;
-        const totalClips = task.tracks.reduce((sum, trk) => sum + trk.length, 0);
-
-        const card = document.createElement('div');
-        card.className = `p-2.5 rounded-xl border cursor-pointer transition flex items-center justify-between group ${
-          isActive
-            ? 'bg-indigo-950/40 border-indigo-500/60 shadow-md shadow-indigo-900/20'
-            : 'bg-panel-850/80 border-slate-800 hover:border-slate-700 hover:bg-panel-800/80'
-        }`;
-
-        card.onclick = () => switchTask(task.id);
-
-        const left = document.createElement('div');
-        left.className = 'flex items-center space-x-2.5 overflow-hidden flex-1';
-
-        const dot = document.createElement('span');
-        dot.className = `w-2 h-2 rounded-full flex-shrink-0 ${isActive ? 'bg-cyan-400 shadow-sm shadow-cyan-400' : 'bg-slate-600'}`;
-
-        const textWrapper = document.createElement('div');
-        textWrapper.className = 'overflow-hidden flex-1';
-
-        const title = document.createElement('div');
-        title.className = `text-xs font-semibold truncate ${isActive ? 'text-white font-bold' : 'text-slate-300'}`;
-        title.textContent = task.name;
-
-        const meta = document.createElement('div');
-        meta.className = 'text-[10px] text-slate-400';
-        meta.textContent = `${totalClips} clip${totalClips === 1 ? '' : 's'}`;
-
-        textWrapper.appendChild(title);
-        textWrapper.appendChild(meta);
-        left.appendChild(dot);
-        left.appendChild(textWrapper);
-
-        // Actions: Rename, Duplicate, Delete
-        const actions = document.createElement('div');
-        actions.className = 'flex items-center space-x-1 opacity-80 group-hover:opacity-100 flex-shrink-0';
-
-        const renameBtn = document.createElement('button');
-        renameBtn.title = 'Rename task';
-        renameBtn.className = 'w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:bg-slate-700/60 text-[10px] transition';
-        renameBtn.innerHTML = '<i class="fa-solid fa-pen"></i>';
-        renameBtn.onclick = (e) => renameTask(task.id, task.name, e);
-
-        const dupBtn = document.createElement('button');
-        dupBtn.title = 'Duplicate task';
-        dupBtn.className = 'w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-indigo-400 hover:bg-slate-700/60 text-[10px] transition';
-        dupBtn.innerHTML = '<i class="fa-solid fa-copy"></i>';
-        dupBtn.onclick = (e) => duplicateTask(task.id, e);
-
-        const delBtn = document.createElement('button');
-        delBtn.title = 'Delete task';
-        delBtn.className = 'w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-slate-700/60 text-[10px] transition';
-        delBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
-        delBtn.onclick = (e) => deleteTask(task.id, e);
-
-        actions.appendChild(renameBtn);
-        actions.appendChild(dupBtn);
-        if (state.tasks.length > 1) {
-          actions.appendChild(delBtn);
-        }
-
-        card.appendChild(left);
-        card.appendChild(actions);
-        listContainer.appendChild(card);
-      });
-
-      updateTaskClipStats();
-    }
-
-    function updateTaskHeading() {
-      const heading = document.getElementById('current-task-heading');
-      const cur = getCurrentTask();
-      if (heading && cur) {
-        heading.textContent = cur.name;
-      }
-    }
-
-    function updateTaskClipStats() {
-      const statElem = document.getElementById('task-clip-count');
-      const cur = getCurrentTask();
-      if (statElem && cur) {
-        const count = cur.tracks.reduce((sum, trk) => sum + trk.length, 0);
-        statElem.textContent = `${count} Clip${count === 1 ? '' : 's'} placed`;
-      }
-    }
-
-    // Helper to decode array buffers
-    function decodeAudioDataPromise(ctx, arrayBuffer) {
-      return new Promise((resolve, reject) => {
-        ctx.decodeAudioData(arrayBuffer.slice(0), (decoded) => {
-          resolve(decoded);
-        }, (err) => {
-          reject(err);
-        });
-      });
-    }
-
-    // High-pass filter & smooth cosine envelope applied to every buffer to eradicate dull thuds, pops, and DC offset
-    function sanitizeAudioBuffer(ctx, rawBuffer) {
-      const numChannels = rawBuffer.numberOfChannels;
-      const length = rawBuffer.length;
-      const sampleRate = rawBuffer.sampleRate;
-      const cleanBuffer = ctx.createBuffer(numChannels, length, sampleRate);
-
-      const fadeDuration = 0.02; // 20ms anti-pop ramp
-      const fadeSamples = Math.min(Math.floor(sampleRate * fadeDuration), Math.floor(length / 2));
-
-      for (let ch = 0; ch < numChannels; ch++) {
-        const input = rawBuffer.getChannelData(ch);
-        const output = cleanBuffer.getChannelData(ch);
-
-        // Simple high-pass DC-offset blocker (R=0.995)
-        let lastIn = 0;
-        let lastOut = 0;
-        const R = 0.995;
-
-        for (let i = 0; i < length; i++) {
-          const currentIn = input[i];
-          lastOut = currentIn - lastIn + R * lastOut;
-          lastIn = currentIn;
-          output[i] = lastOut;
-        }
-
-        // Apply smooth raised-cosine fade-in & fade-out to ensure 0.0 amplitude at boundaries
-        for (let i = 0; i < fadeSamples; i++) {
-          const fadeInMultiplier = 0.5 * (1 - Math.cos((Math.PI * i) / fadeSamples));
-          output[i] *= fadeInMultiplier;
-
-          const outIdx = length - 1 - i;
-          const fadeOutMultiplier = 0.5 * (1 - Math.cos((Math.PI * i) / fadeSamples));
-          output[outIdx] *= fadeOutMultiplier;
-        }
-      }
-      return cleanBuffer;
-    }
-
-    // High quality natural human voice synthesis pipeline
-    // Fetches genuine neural audio MP3 streams with open CORS, applies anti-click filter, with instant browser SpeechSynthesis fallback
-    async function fetchNaturalSpeechBuffer(ctx, text, voiceName, rate = 1.0, pitch = 1.0) {
-      const cleanText = text.trim();
-      const voice = voiceName || 'Russell';
-      const cacheKey = `${voice}::${rate}::${pitch}::${cleanText}`;
-
-      if (ttsAudioBufferCache.has(cacheKey)) {
-        return ttsAudioBufferCache.get(cacheKey);
-      }
-
-      // StreamElements Cloud Voice Endpoint (Pristine neural human MP3 voice)
-      try {
-        const primaryUrl = `https://api.streamelements.com/kappa/v2/speech?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(cleanText)}`;
-        const response = await fetch(primaryUrl);
-        if (response.ok) {
-          const arrayBuffer = await response.arrayBuffer();
-          const rawBuffer = await decodeAudioDataPromise(ctx, arrayBuffer);
-          const sanitized = sanitizeAudioBuffer(ctx, rawBuffer);
-          ttsAudioBufferCache.set(cacheKey, sanitized);
-          return sanitized;
-        }
-      } catch (e) {
-        console.warn('Primary speech stream endpoint skipped, trying secondary...', e);
-      }
-
-      // Secondary Google TTS Audio Endpoint
-      try {
-        const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(cleanText)}`;
-        const response = await fetch(fallbackUrl);
-        if (response.ok) {
-          const arrayBuffer = await response.arrayBuffer();
-          const rawBuffer = await decodeAudioDataPromise(ctx, arrayBuffer);
-          const sanitized = sanitizeAudioBuffer(ctx, rawBuffer);
-          ttsAudioBufferCache.set(cacheKey, sanitized);
-          return sanitized;
-        }
-      } catch (e) {
-        console.warn('Secondary speech endpoint unavailable, using native browser speech synthesis audio...', e);
-      }
-
-      // Native SpeechSynthesis recording fallback with sanitized buffer output
-      const nativeBuffer = await generateNativeSpeechBuffer(ctx, cleanText, voice, rate, pitch);
-      const cleanNativeBuffer = sanitizeAudioBuffer(ctx, nativeBuffer);
-      ttsAudioBufferCache.set(cacheKey, cleanNativeBuffer);
-      return cleanNativeBuffer;
-    }
-
-    // Native Speech Synthesis utterance runner
-    function generateNativeSpeechBuffer(ctx, text, voiceName, rate, pitch) {
-      return new Promise((resolve) => {
-        if (!('speechSynthesis' in window)) {
-          resolve(generatePureVoiceBuffer(ctx, text, voiceName));
-          return;
-        }
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        const voices = window.speechSynthesis.getVoices();
-        
-        const isFemale = ['Amy', 'Salli', 'Emma'].includes(voiceName);
-        let matchedVoice = voices.find(v => v.lang.startsWith('en') && (isFemale ? (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha') || v.name.includes('Victoria')) : (v.name.includes('Male') || v.name.includes('David') || v.name.includes('Alex'))));
-        if (!matchedVoice) matchedVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
-        if (matchedVoice) utterance.voice = matchedVoice;
-
-        utterance.rate = rate || 1.0;
-        utterance.pitch = pitch || (isFemale ? 1.15 : 0.95);
-
-        const wordCount = text.split(/\s+/).filter(Boolean).length;
-        const estimatedSeconds = Math.max(1.2, (wordCount * 0.45 + 0.4) / (rate || 1.0));
-
-        let startTime = 0;
-        utterance.onstart = () => {
-          startTime = Date.now();
-        };
-
-        utterance.onend = () => {
-          const elapsed = (Date.now() - startTime) / 1000 || estimatedSeconds;
-          const buffer = generatePureVoiceBuffer(ctx, text, voiceName, elapsed);
-          resolve(buffer);
-        };
-
-        utterance.onerror = () => {
-          const buffer = generatePureVoiceBuffer(ctx, text, voiceName, estimatedSeconds);
-          resolve(buffer);
-        };
-
-        window.speechSynthesis.speak(utterance);
-
-        // Safety fallback timer if browser speech cancels silently
-        setTimeout(() => {
-          if (!startTime) {
-            window.speechSynthesis.cancel();
-            resolve(generatePureVoiceBuffer(ctx, text, voiceName, estimatedSeconds));
-          }
-        }, (estimatedSeconds + 1.5) * 1000);
-      });
-    }
-
-    // Clean, anti-click harmonic voice buffer without dull thuds or clicks
-    function generatePureVoiceBuffer(ctx, text, voice, forcedDuration) {
+    /* ==========================================================================
+       SYNTHESIZERS & PROCEDURAL AUDIO (SFX, FOLEY, AMBIENCE)
+       ========================================================================== */
+    function createAntiClickBuffer(duration, generatorFn) {
+      const ctx = getAudioContext();
       const sampleRate = ctx.sampleRate;
-      const words = text.split(/\s+/).filter(Boolean);
-      const duration = forcedDuration || Math.max(1.2, words.length * 0.42 + 0.3);
-      const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
-      const d = buffer.getChannelData(0);
+      const numFrames = Math.max(1, Math.floor(sampleRate * duration));
+      const buffer = ctx.createBuffer(2, numFrames, sampleRate);
+      const ch0 = buffer.getChannelData(0);
+      const ch1 = buffer.getChannelData(1);
 
-      const baseF0 = (voice === 'Brian' || voice === 'Geraint') ? 115 : (voice === 'Amy' || voice === 'Salli') ? 210 : 150;
-      let pos = Math.floor(sampleRate * 0.05);
+      generatorFn(ch0, ch1, sampleRate, numFrames);
 
-      words.forEach((word) => {
-        const wordSamples = Math.floor(sampleRate * 0.32);
-        for (let i = 0; i < wordSamples; i++) {
-          const idx = pos + i;
-          if (idx >= d.length) break;
-          const t = i / sampleRate;
-          const f0 = baseF0 + Math.sin(t * 10) * 4;
-          // Smooth sine harmonics - zero square clicks
-          const h1 = Math.sin(2 * Math.PI * f0 * t) * 0.42;
-          const h2 = Math.sin(2 * Math.PI * (f0 * 2) * t) * 0.24;
-          const h3 = Math.sin(2 * Math.PI * (f0 * 3) * t) * 0.12;
-          const env = Math.sin((i / wordSamples) * Math.PI);
-          d[idx] += (h1 + h2 + h3) * env * 0.65;
-        }
-        pos += wordSamples + Math.floor(sampleRate * 0.06);
-      });
+      // Apply 10ms smooth cosine envelope at boundaries to prevent clicks
+      const fadeFrames = Math.min(Math.floor(sampleRate * 0.01), Math.floor(numFrames / 4));
+      for (let i = 0; i < fadeFrames; i++) {
+        const mult = 0.5 * (1 - Math.cos((Math.PI * i) / fadeFrames));
+        ch0[i] *= mult;
+        ch1[i] *= mult;
+        const end = numFrames - 1 - i;
+        ch0[end] *= mult;
+        ch1[end] *= mult;
+      }
 
-      return sanitizeAudioBuffer(ctx, buffer);
+      return buffer;
     }
 
-    let currentVoicePreset = 'male-med';
-
-    function applyVoicePreset(presetType) {
-      currentVoicePreset = presetType;
-      const voiceSelect = document.getElementById('tts-voice-select');
-      const pitchSlider = document.getElementById('tts-pitch-slider');
-
-      const presetMap = {
-        'male-low': { voice: 'Brian', pitch: 0.85 },
-        'male-med': { voice: 'Russell', pitch: 1.0 },
-        'female-med': { voice: 'Amy', pitch: 1.05 },
-        'female-high': { voice: 'Salli', pitch: 1.25 }
-      };
-
-      if (presetMap[presetType]) {
-        voiceSelect.value = presetMap[presetType].voice;
-        pitchSlider.value = presetMap[presetType].pitch;
-        document.getElementById('label-tts-pitch').textContent = presetMap[presetType].pitch + 'x';
-      }
-
-      ['male-low', 'male-med', 'female-med', 'female-high'].forEach(type => {
-        const btn = document.getElementById(`preset-btn-${type}`);
-        if (btn) {
-          if (type === presetType) {
-            btn.className = 'voice-preset-btn p-2 rounded-lg bg-indigo-600/30 text-left border border-indigo-500/60 transition';
-          } else {
-            btn.className = 'voice-preset-btn p-2 rounded-lg bg-panel-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition';
-          }
-        }
-      });
-      showToast(`Selected Voice: ${voiceSelect.options[voiceSelect.selectedIndex].text}`, 'info');
-    }
-
-    document.getElementById('btn-preview-tts').addEventListener('click', async () => {
-      const text = document.getElementById('tts-input').value.trim();
-      if (!text) {
-        showToast('Please type text script to preview', 'warning');
-        return;
-      }
-      const voice = document.getElementById('tts-voice-select').value;
-      const rate = parseFloat(document.getElementById('tts-rate-slider').value);
-      const pitch = parseFloat(document.getElementById('tts-pitch-slider').value);
-      
-      const badge = document.getElementById('tts-status-badge');
-      badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Synthesizing...';
-
-      try {
-        const ctx = getAudioContext();
-        const buffer = await fetchNaturalSpeechBuffer(ctx, text, voice, rate, pitch);
-        const src = ctx.createBufferSource();
-        src.buffer = buffer;
-
-        // Smooth output gain node to prevent click on start/stop
-        const previewGain = ctx.createGain();
-        previewGain.gain.setValueAtTime(0.001, ctx.currentTime);
-        previewGain.gain.exponentialRampToValueAtTime(1.0, ctx.currentTime + 0.02);
-
-        src.connect(previewGain);
-        previewGain.connect(ctx.destination);
-        src.start();
-        showToast(`Playing speech (${voice})`, 'info');
-      } catch (err) {
-        console.error(err);
-        showToast('Preview error', 'warning');
-      } finally {
-        badge.innerHTML = '<i class="fa-solid fa-user-check"></i> Ready';
-      }
-    });
-
-    document.getElementById('btn-add-tts-to-track').addEventListener('click', async () => {
-      const text = document.getElementById('tts-input').value.trim();
-      if (!text) {
-        showToast('Please type text before generating clip', 'warning');
-        return;
-      }
-      const cur = getCurrentTask();
-      if (!cur) return;
-
-      const voice = document.getElementById('tts-voice-select').value;
-      const rate = parseFloat(document.getElementById('tts-rate-slider').value);
-      const pitch = parseFloat(document.getElementById('tts-pitch-slider').value);
-      const targetTrack = parseInt(document.getElementById('tts-target-track').value, 10);
-      
-      const badge = document.getElementById('tts-status-badge');
-      badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
-
-      try {
-        const ctx = getAudioContext();
-        const buffer = await fetchNaturalSpeechBuffer(ctx, text, voice, rate, pitch);
-        const clipId = 'clip_tts_' + Date.now();
-        window.clipBufferRegistry[clipId] = buffer;
-
-        const newClip = {
-          id: clipId,
-          type: 'tts',
-          name: `TTS (${voice}): "${text.substring(0, 14)}${text.length > 14 ? '...' : ''}"`,
-          icon: 'fa-solid fa-comment-dots',
-          text: text,
-          voice: voice,
-          rate: rate,
-          pitch: pitch,
-          startTime: state.currentTime,
-          duration: parseFloat(buffer.duration.toFixed(2))
-        };
-
-        cur.tracks[targetTrack].push(newClip);
-        saveToStorage();
-        renderTimelineClips();
-        showToast(`Added clean speech clip to Track ${targetTrack + 1}!`, 'success');
-      } catch (err) {
-        console.error(err);
-        showToast('Failed to add speech clip', 'warning');
-      } finally {
-        badge.innerHTML = '<i class="fa-solid fa-user-check"></i> Ready';
-      }
-    });
-
-    const SOUND_LIBRARY = [
-      // SFX Category
+    const SFX_DEFINITIONS = [
       {
-        id: 'sfx_laser',
-        category: 'sfx',
-        name: 'Sci-Fi Laser Blast',
-        duration: 0.35,
-        targetTrack: 1,
-        color: 'from-violet-600 to-indigo-600',
-        icon: 'fa-crosshairs',
-        synth: (ctx) => {
-          const sampleRate = ctx.sampleRate;
-          const length = Math.floor(sampleRate * 0.35);
-          const buffer = ctx.createBuffer(1, length, sampleRate);
-          const data = buffer.getChannelData(0);
-          for (let i = 0; i < length; i++) {
-            const t = i / sampleRate;
-            const freq = 1200 * Math.exp(-t * 18);
-            const env = Math.exp(-t * 10);
-            data[i] = Math.sin(2 * Math.PI * freq * t) * env;
+        id: 'laser',
+        name: 'Retro Laser Shot',
+        category: 'SFX',
+        defaultTrack: 1,
+        color: 'from-amber-600 to-yellow-600',
+        generate: () => createAntiClickBuffer(0.35, (c0, c1, sr, len) => {
+          for (let i = 0; i < len; i++) {
+            const t = i / sr;
+            const freq = 1200 * Math.exp(-t * 14);
+            const val = Math.sin(2 * Math.PI * freq * t) * (1 - t / 0.35);
+            c0[i] = val * 0.6;
+            c1[i] = val * 0.6;
           }
-          return sanitizeAudioBuffer(ctx, buffer);
-        }
+        })
       },
       {
-        id: 'sfx_explosion',
-        category: 'sfx',
-        name: 'Sub-Bass Explosion',
-        duration: 1.8,
-        targetTrack: 1,
-        color: 'from-rose-600 to-red-800',
-        icon: 'fa-bomb',
-        synth: (ctx) => {
-          const sampleRate = ctx.sampleRate;
-          const length = Math.floor(sampleRate * 1.8);
-          const buffer = ctx.createBuffer(1, length, sampleRate);
-          const data = buffer.getChannelData(0);
-          let lastOut = 0;
-          for (let i = 0; i < length; i++) {
-            const t = i / sampleRate;
-            const white = Math.random() * 2 - 1;
-            const brown = (lastOut + (0.02 * white)) / 1.02;
-            lastOut = brown;
-            const sub = Math.sin(2 * Math.PI * (75 * Math.exp(-t * 2.5)) * t) * 0.6;
-            const env = Math.exp(-t * 2.2);
-            data[i] = (brown * 3.0 + sub) * env;
+        id: 'explosion',
+        name: 'Deep Cinematic Boom',
+        category: 'SFX',
+        defaultTrack: 1,
+        color: 'from-orange-600 to-rose-700',
+        generate: () => createAntiClickBuffer(1.6, (c0, c1, sr, len) => {
+          let last0 = 0, last1 = 0;
+          for (let i = 0; i < len; i++) {
+            const t = i / sr;
+            const env = Math.exp(-t * 2.8);
+            const sub = Math.sin(2 * Math.PI * (65 * Math.exp(-t * 3)) * t) * 0.7;
+            const noise = (Math.random() * 2 - 1) * 0.5;
+            last0 = (last0 + 0.04 * noise) / 1.04;
+            last1 = (last1 + 0.04 * noise) / 1.04;
+            c0[i] = (last0 + sub) * env * 0.8;
+            c1[i] = (last1 + sub) * env * 0.8;
           }
-          return sanitizeAudioBuffer(ctx, buffer);
-        }
+        })
       },
       {
-        id: 'sfx_coin',
-        category: 'sfx',
-        name: '8-Bit Retro Coin',
-        duration: 0.45,
-        targetTrack: 1,
-        color: 'from-amber-500 to-yellow-600',
-        icon: 'fa-coins',
-        synth: (ctx) => {
-          const sampleRate = ctx.sampleRate;
-          const length = Math.floor(sampleRate * 0.45);
-          const buffer = ctx.createBuffer(1, length, sampleRate);
-          const data = buffer.getChannelData(0);
-          const split = Math.floor(sampleRate * 0.12);
-          for (let i = 0; i < length; i++) {
-            const t = i / sampleRate;
-            const freq = i < split ? 987.77 : 1318.51;
-            const wave = Math.sin(2 * Math.PI * freq * t);
-            const env = Math.exp(-t * 8);
-            data[i] = wave * env * 0.5;
+        id: 'coin',
+        name: 'Retro Reward Ping',
+        category: 'SFX',
+        defaultTrack: 1,
+        color: 'from-yellow-500 to-amber-600',
+        generate: () => createAntiClickBuffer(0.4, (c0, c1, sr, len) => {
+          for (let i = 0; i < len; i++) {
+            const t = i / sr;
+            const f = t < 0.1 ? 987.77 : 1318.51; // B5 to E6
+            const val = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 7);
+            c0[i] = val * 0.5;
+            c1[i] = val * 0.5;
           }
-          return sanitizeAudioBuffer(ctx, buffer);
-        }
+        })
       },
       {
-        id: 'sfx_whoosh',
-        category: 'sfx',
-        name: 'Cinematic Whoosh',
-        duration: 0.8,
-        targetTrack: 1,
-        color: 'from-purple-500 to-pink-600',
-        icon: 'fa-wind',
-        synth: (ctx) => {
-          const sampleRate = ctx.sampleRate;
-          const length = Math.floor(sampleRate * 0.8);
-          const buffer = ctx.createBuffer(1, length, sampleRate);
-          const data = buffer.getChannelData(0);
-          for (let i = 0; i < length; i++) {
-            const t = i / sampleRate;
-            const env = Math.sin(Math.PI * (t / 0.8));
-            data[i] = (Math.random() * 2 - 1) * env * 0.45;
+        id: 'whoosh',
+        name: 'Dynamic Air Whoosh',
+        category: 'SFX',
+        defaultTrack: 1,
+        color: 'from-sky-600 to-blue-700',
+        generate: () => createAntiClickBuffer(0.8, (c0, c1, sr, len) => {
+          for (let i = 0; i < len; i++) {
+            const t = i / sr;
+            const env = Math.sin((Math.PI * t) / 0.8);
+            c0[i] = (Math.random() * 2 - 1) * env * 0.4;
+            c1[i] = (Math.random() * 2 - 1) * env * 0.4;
           }
-          return sanitizeAudioBuffer(ctx, buffer);
-        }
-      },
-
-      // Foley Category
-      {
-        id: 'foley_footsteps',
-        category: 'foley',
-        name: 'Gravel Footsteps',
-        duration: 2.2,
-        targetTrack: 2,
-        color: 'from-emerald-600 to-teal-700',
-        icon: 'fa-shoe-prints',
-        synth: (ctx) => {
-          const sampleRate = ctx.sampleRate;
-          const length = Math.floor(sampleRate * 2.2);
-          const buffer = ctx.createBuffer(1, length, sampleRate);
-          const data = buffer.getChannelData(0);
-          const steps = [0.1, 0.6, 1.1, 1.6];
-          steps.forEach(st => {
-            const startSample = Math.floor(st * sampleRate);
-            const stepLen = Math.floor(0.18 * sampleRate);
-            for (let i = 0; i < stepLen; i++) {
-              const idx = startSample + i;
-              if (idx < length) {
-                const t = i / sampleRate;
-                const env = Math.sin((t / 0.18) * Math.PI) * Math.exp(-t * 15);
-                const noise = (Math.random() * 2 - 1) * 0.6;
-                const thud = Math.sin(2 * Math.PI * 90 * t) * 0.4;
-                data[idx] += (noise + thud) * env;
-              }
-            }
-          });
-          return sanitizeAudioBuffer(ctx, buffer);
-        }
-      },
-      {
-        id: 'foley_door_creak',
-        category: 'foley',
-        name: 'Wooden Door Creak',
-        duration: 1.4,
-        targetTrack: 2,
-        color: 'from-amber-700 to-orange-800',
-        icon: 'fa-door-open',
-        synth: (ctx) => {
-          const sampleRate = ctx.sampleRate;
-          const length = Math.floor(sampleRate * 1.4);
-          const buffer = ctx.createBuffer(1, length, sampleRate);
-          const data = buffer.getChannelData(0);
-          for (let i = 0; i < length; i++) {
-            const t = i / sampleRate;
-            const f = 200 + Math.sin(t * 35) * 60 + Math.random() * 30;
-            const env = Math.sin((t / 1.4) * Math.PI);
-            data[i] = Math.sin(2 * Math.PI * f * t) * env * 0.4;
-          }
-          return sanitizeAudioBuffer(ctx, buffer);
-        }
-      },
-      {
-        id: 'foley_punch',
-        category: 'foley',
-        name: 'Heavy Punch Impact',
-        duration: 0.5,
-        targetTrack: 2,
-        color: 'from-red-600 to-orange-700',
-        icon: 'fa-hand-back-fist',
-        synth: (ctx) => {
-          const sampleRate = ctx.sampleRate;
-          const length = Math.floor(sampleRate * 0.5);
-          const buffer = ctx.createBuffer(1, length, sampleRate);
-          const data = buffer.getChannelData(0);
-          for (let i = 0; i < length; i++) {
-            const t = i / sampleRate;
-            const f = 160 * Math.exp(-t * 20);
-            const noise = (Math.random() * 2 - 1) * Math.exp(-t * 25);
-            const sub = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 12);
-            data[i] = (noise * 0.5 + sub * 0.8);
-          }
-          return sanitizeAudioBuffer(ctx, buffer);
-        }
-      },
-
-      // Ambience Category
-      {
-        id: 'amb_rain',
-        category: 'ambience',
-        name: 'Continuous Rainfall',
-        duration: 6.0,
-        targetTrack: 3,
-        color: 'from-cyan-700 to-blue-800',
-        icon: 'fa-cloud-showers-heavy',
-        synth: (ctx) => {
-          const sampleRate = ctx.sampleRate;
-          const length = Math.floor(sampleRate * 6.0);
-          const buffer = ctx.createBuffer(1, length, sampleRate);
-          const data = buffer.getChannelData(0);
-          let b0 = 0, b1 = 0, b2 = 0;
-          for (let i = 0; i < length; i++) {
-            const white = Math.random() * 2 - 1;
-            b0 = 0.99 * b0 + white * 0.05;
-            b1 = 0.96 * b1 + white * 0.15;
-            b2 = 0.85 * b2 + white * 0.25;
-            const env = Math.min(1, Math.min(i / (sampleRate * 0.5), (length - i) / (sampleRate * 0.5)));
-            data[i] = (b0 + b1 + b2) * 0.25 * env;
-          }
-          return sanitizeAudioBuffer(ctx, buffer);
-        }
-      },
-      {
-        id: 'amb_drone',
-        category: 'ambience',
-        name: 'Deep Cosmic Sub-Drone',
-        duration: 6.0,
-        targetTrack: 3,
-        color: 'from-indigo-900 to-purple-950',
-        icon: 'fa-satellite-dish',
-        synth: (ctx) => {
-          const sampleRate = ctx.sampleRate;
-          const length = Math.floor(sampleRate * 6.0);
-          const buffer = ctx.createBuffer(1, length, sampleRate);
-          const data = buffer.getChannelData(0);
-          for (let i = 0; i < length; i++) {
-            const t = i / sampleRate;
-            const o1 = Math.sin(2 * Math.PI * 55 * t);
-            const o2 = Math.sin(2 * Math.PI * 110.5 * t);
-            const o3 = Math.sin(2 * Math.PI * 165.2 * t);
-            const lfo = 0.8 + 0.2 * Math.sin(2 * Math.PI * 0.25 * t);
-            const env = Math.min(1, Math.min(t / 0.5, (6.0 - t) / 0.5));
-            data[i] = (o1 * 0.35 + o2 * 0.22 + o3 * 0.12) * lfo * env;
-          }
-          return sanitizeAudioBuffer(ctx, buffer);
-        }
-      },
-      {
-        id: 'amb_wind',
-        category: 'ambience',
-        name: 'Howling Cold Wind',
-        duration: 5.5,
-        targetTrack: 3,
-        color: 'from-slate-700 to-teal-900',
-        icon: 'fa-wind',
-        synth: (ctx) => {
-          const sampleRate = ctx.sampleRate;
-          const length = Math.floor(sampleRate * 5.5);
-          const buffer = ctx.createBuffer(1, length, sampleRate);
-          const data = buffer.getChannelData(0);
-          let val = 0;
-          for (let i = 0; i < length; i++) {
-            const t = i / sampleRate;
-            const white = Math.random() * 2 - 1;
-            val = val * 0.95 + white * 0.05;
-            const mod = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.4 * t);
-            const env = Math.min(1, Math.min(t / 0.4, (5.5 - t) / 0.4));
-            data[i] = val * 2.5 * mod * env;
-          }
-          return sanitizeAudioBuffer(ctx, buffer);
-        }
+        })
       }
     ];
 
-    let currentCategoryFilter = 'all';
+    function generateFoleyBuffer(type, damping) {
+      const dur = type === 'footsteps' ? 0.4 : type === 'woodcreak' ? 1.2 : 0.8;
+      return createAntiClickBuffer(dur, (c0, c1, sr, len) => {
+        let filt = 0;
+        const coeff = Math.min(0.3, damping / sr);
+        for (let i = 0; i < len; i++) {
+          const t = i / sr;
+          const white = Math.random() * 2 - 1;
+          filt += coeff * (white - filt);
+          let env = Math.exp(-t * (type === 'footsteps' ? 12 : 3));
+          if (type === 'woodcreak') {
+            env *= 0.5 + 0.5 * Math.sin(2 * Math.PI * 25 * t);
+          }
+          c0[i] = filt * env * 0.7;
+          c1[i] = filt * env * 0.7;
+        }
+      });
+    }
 
-    function filterLibraryCategory(cat) {
-      currentCategoryFilter = cat;
-      ['all', 'sfx', 'foley', 'ambience'].forEach(c => {
-        const btn = document.getElementById(`cat-btn-${c}`);
-        if (btn) {
-          if (c === cat) {
-            btn.className = 'px-2.5 py-1 text-[11px] rounded-lg bg-indigo-600 text-white font-medium';
+    function generateAmbienceBuffer(type, duration) {
+      return createAntiClickBuffer(duration, (c0, c1, sr, len) => {
+        let f0 = 0, f1 = 0;
+        for (let i = 0; i < len; i++) {
+          const t = i / sr;
+          if (type === 'rain') {
+            const drop = Math.random() < 0.003 ? (Math.random() * 2 - 1) * 0.8 : 0;
+            const hiss = (Math.random() * 2 - 1) * 0.15;
+            c0[i] = hiss + drop;
+            c1[i] = hiss + drop;
+          } else if (type === 'space') {
+            const sub = Math.sin(2 * Math.PI * 55 * t) * 0.4;
+            const pad = Math.sin(2 * Math.PI * 110.5 * t) * 0.2;
+            c0[i] = sub + pad;
+            c1[i] = sub + pad;
           } else {
-            btn.className = 'px-2.5 py-1 text-[11px] rounded-lg bg-panel-850 text-slate-400 hover:text-white';
+            // Wind / air
+            const n = Math.random() * 2 - 1;
+            f0 += 0.02 * (n - f0);
+            f1 += 0.02 * (n - f1);
+            const gust = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.2 * t);
+            c0[i] = f0 * gust * 0.6;
+            c1[i] = f1 * gust * 0.6;
           }
         }
       });
-      renderSoundLibrary();
     }
 
-    function renderSoundLibrary() {
-      const container = document.getElementById('library-cards-container');
-      if (!container) return;
+    function renderSfxList() {
+      const container = document.getElementById('sfx-items-container');
       container.innerHTML = '';
 
-      const items = currentCategoryFilter === 'all' 
-        ? SOUND_LIBRARY 
-        : SOUND_LIBRARY.filter(s => s.category === currentCategoryFilter);
-
-      items.forEach(sfx => {
+      SFX_DEFINITIONS.forEach(def => {
         const card = document.createElement('div');
-        card.draggable = true;
-        card.className = `p-2.5 rounded-xl bg-panel-850 border border-slate-800 hover:border-slate-700 transition flex items-center justify-between gap-2 shadow-sm cursor-grab active:cursor-grabbing`;
-        
-        card.ondragstart = (e) => {
-          e.dataTransfer.setData('text/plain', JSON.stringify({
-            origin: 'library',
-            sfxId: sfx.id,
-            duration: sfx.duration,
-            name: sfx.name,
-            icon: sfx.icon,
-            targetTrack: sfx.targetTrack
-          }));
-        };
-
-        const left = document.createElement('div');
-        left.className = 'flex items-center space-x-2.5 overflow-hidden flex-1';
-
-        const iconBox = document.createElement('div');
-        iconBox.className = `w-7 h-7 rounded-lg bg-gradient-to-br ${sfx.color} flex items-center justify-center text-white text-[11px] flex-shrink-0 shadow-sm`;
-        iconBox.innerHTML = `<i class="fa-solid ${sfx.icon}"></i>`;
-
-        const details = document.createElement('div');
-        details.className = 'overflow-hidden flex-1';
-
-        const nameSpan = document.createElement('div');
-        nameSpan.className = 'text-xs font-semibold text-slate-200 truncate';
-        nameSpan.textContent = sfx.name;
-
-        const durSpan = document.createElement('div');
-        durSpan.className = 'text-[10px] text-slate-400 uppercase tracking-wider font-mono';
-        durSpan.textContent = `${sfx.duration}s &bull; ${sfx.category.toUpperCase()}`;
-
-        details.appendChild(nameSpan);
-        details.appendChild(durSpan);
-        left.appendChild(iconBox);
-        left.appendChild(details);
-
-        const actions = document.createElement('div');
-        actions.className = 'flex items-center space-x-1.5 flex-shrink-0';
-
-        const trackSelect = document.createElement('select');
-        trackSelect.className = 'bg-panel-900 border border-slate-700 rounded p-1 text-[10px] text-slate-300';
-        ['Track 1 (Speech)', 'Track 2 (SFX)', 'Track 3 (Foley)', 'Track 4 (Ambience)'].forEach((tName, idx) => {
-          const opt = document.createElement('option');
-          opt.value = idx;
-          opt.textContent = `T${idx+1}`;
-          if (idx === sfx.targetTrack) opt.selected = true;
-          trackSelect.appendChild(opt);
-        });
-
-        const previewBtn = document.createElement('button');
-        previewBtn.title = 'Preview Sound';
-        previewBtn.className = 'w-6 h-6 rounded bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-[10px] transition active:scale-90';
-        previewBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-        previewBtn.onclick = () => {
-          const ctx = getAudioContext();
-          const buf = sfx.synth(ctx);
-          const src = ctx.createBufferSource();
-          src.buffer = buf;
-          src.connect(ctx.destination);
-          src.start();
-        };
-
-        const addBtn = document.createElement('button');
-        addBtn.title = 'Add to Track at playhead';
-        addBtn.className = 'px-2 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 text-[10px] font-semibold transition active:scale-95';
-        addBtn.innerHTML = '<i class="fa-solid fa-plus mr-0.5"></i>Add';
-        addBtn.onclick = () => {
-          const selectedTrack = parseInt(trackSelect.value, 10);
-          addSoundToTrack(sfx, selectedTrack, state.currentTime);
-        };
-
-        actions.appendChild(trackSelect);
-        actions.appendChild(previewBtn);
-        actions.appendChild(addBtn);
-
-        card.appendChild(left);
-        card.appendChild(actions);
+        card.className = 'bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d] flex items-center justify-between';
+        card.innerHTML = `
+          <div>
+            <div class="text-xs font-semibold text-slate-200">${def.name}</div>
+            <div class="text-[10px] text-slate-500">${def.category}</div>
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <button class="px-2 py-1 bg-[#21262d] hover:bg-[#30363d] text-slate-300 rounded text-xs" title="Preview" onclick="previewSfx('${def.id}')">
+              <i class="fa-solid fa-play text-[10px]"></i>
+            </button>
+            <button class="px-2 py-1 bg-cyan-700 hover:bg-cyan-600 text-white font-bold rounded text-xs" title="Add to Track 2" onclick="addSfxToTrack('${def.id}', 1)">
+              <i class="fa-solid fa-plus text-[10px]"></i> Track 2
+            </button>
+          </div>
+        `;
         container.appendChild(card);
       });
     }
 
-    function addSoundToTrack(sfx, trackIndex, startTime) {
-      const cur = getCurrentTask();
-      if (!cur) return;
-
-      const clipId = 'clip_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
-      const newClip = {
-        id: clipId,
-        type: 'library',
-        libraryId: sfx.id,
-        name: sfx.name,
-        icon: sfx.icon,
-        startTime: Math.max(0, Math.min(startTime, MAX_DURATION_SEC - sfx.duration)),
-        duration: sfx.duration
-      };
-
-      cur.tracks[trackIndex].push(newClip);
-      saveToStorage();
-      renderTimelineClips();
-      showToast(`Added "${sfx.name}" to Track ${trackIndex + 1}`, 'success');
-    }
-
-    document.getElementById('btn-preview-gen').addEventListener('click', () => {
-      const type = document.getElementById('gen-type').value;
-      const duration = parseFloat(document.getElementById('gen-duration').value);
-      const tone = parseFloat(document.getElementById('gen-tone').value);
+    function previewBuffer(buf) {
+      if (!buf) return;
       const ctx = getAudioContext();
-      const buffer = generateProceduralAmbience(ctx, type, Math.min(3, duration), tone);
       const src = ctx.createBufferSource();
-      src.buffer = buffer;
+      src.buffer = buf;
       src.connect(ctx.destination);
       src.start();
-    });
-
-    document.getElementById('btn-add-gen').addEventListener('click', () => {
-      const cur = getCurrentTask();
-      if (!cur) return;
-      const type = document.getElementById('gen-type').value;
-      const duration = parseFloat(document.getElementById('gen-duration').value);
-      const tone = parseFloat(document.getElementById('gen-tone').value);
-      const trackIndex = parseInt(document.getElementById('gen-target-track').value, 10);
-
-      const ctx = getAudioContext();
-      const buffer = generateProceduralAmbience(ctx, type, duration, tone);
-      const clipId = 'clip_gen_' + Date.now();
-      window.clipBufferRegistry[clipId] = buffer;
-
-      const nameMap = {
-        rain: 'Synth Rain Storm',
-        wind: 'Synth Mountain Wind',
-        drone: 'Sub Drone Texture',
-        steps: 'Wood Footsteps',
-        vinyl: 'Vinyl Surface Crackle'
-      };
-
-      const newClip = {
-        id: clipId,
-        type: 'generated',
-        name: `${nameMap[type] || 'Ambience'} (${duration}s)`,
-        icon: 'fa-sliders',
-        startTime: state.currentTime,
-        duration: duration
-      };
-
-      cur.tracks[trackIndex].push(newClip);
-      saveToStorage();
-      renderTimelineClips();
-      showToast(`Added ambience to Track ${trackIndex + 1}`, 'success');
-    });
-
-    function generateProceduralAmbience(ctx, type, duration, tone) {
-      const sampleRate = ctx.sampleRate;
-      const length = Math.floor(sampleRate * duration);
-      const buffer = ctx.createBuffer(1, length, sampleRate);
-      const data = buffer.getChannelData(0);
-      const toneFactor = tone / 100;
-
-      if (type === 'rain' || type === 'vinyl') {
-        let b0 = 0, b1 = 0;
-        for (let i = 0; i < length; i++) {
-          const white = Math.random() * 2 - 1;
-          b0 = 0.97 * b0 + white * 0.1 * toneFactor;
-          b1 = 0.92 * b1 + white * 0.15;
-          const crackle = (type === 'vinyl' && Math.random() < 0.002) ? (Math.random() * 2 - 1) * 0.7 : 0;
-          data[i] = (b0 + b1 * 0.4 + crackle) * 0.3;
-        }
-      } else if (type === 'wind') {
-        let val = 0;
-        for (let i = 0; i < length; i++) {
-          const t = i / sampleRate;
-          const white = Math.random() * 2 - 1;
-          val = val * (0.9 + 0.08 * toneFactor) + white * 0.04;
-          const lfo = 0.4 + 0.6 * Math.sin(2 * Math.PI * 0.35 * t);
-          data[i] = val * 2.8 * lfo;
-        }
-      } else if (type === 'drone') {
-        const base = 45 + toneFactor * 65;
-        for (let i = 0; i < length; i++) {
-          const t = i / sampleRate;
-          data[i] = (
-            Math.sin(2 * Math.PI * base * t) * 0.35 +
-            Math.sin(2 * Math.PI * (base * 2.01) * t) * 0.2 +
-            Math.sin(2 * Math.PI * (base * 3.02) * t) * 0.12
-          ) * 0.55;
-        }
-      } else {
-        // Steps cadence
-        for (let st = 0.2; st < duration; st += 0.65) {
-          const startSample = Math.floor(st * sampleRate);
-          const stepLen = Math.floor(0.12 * sampleRate);
-          for (let i = 0; i < stepLen; i++) {
-            const idx = startSample + i;
-            if (idx < length) {
-              const t = i / sampleRate;
-              data[idx] += (Math.random() * 2 - 1) * Math.sin((t / 0.12) * Math.PI) * 0.45;
-            }
-          }
-        }
-      }
-      return sanitizeAudioBuffer(ctx, buffer);
     }
 
-    function setupLaneDropZones() {
-      for (let i = 0; i < 4; i++) {
-        const lane = document.getElementById(`lane-${i}`);
-        if (!lane) continue;
+    function previewSfx(defId) {
+      const def = SFX_DEFINITIONS.find(d => d.id === defId);
+      if (def) previewBuffer(def.generate());
+    }
 
-        lane.addEventListener('dragover', (e) => {
+    function addSfxToTrack(defId, trackIdx) {
+      const def = SFX_DEFINITIONS.find(d => d.id === defId);
+      if (!def) return;
+      const buf = def.generate();
+      const bufferKey = 'buf_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      bufferRegistry.set(bufferKey, buf);
+
+      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+      task.tracks[trackIdx].push({
+        id: 'clip_' + Date.now(),
+        name: def.name,
+        start: playheadTime,
+        duration: buf.duration,
+        color: def.color,
+        bufferKey: bufferKey
+      });
+
+      renderTimeline();
+      saveToLocalStorage();
+    }
+
+    /* ==========================================================================
+       EXTERNAL AUDIO / SPEECH FILE IMPORT
+       ========================================================================== */
+    async function handleAudioFileImport(file, targetTrack = 0) {
+      if (!file) return;
+      document.getElementById('export-status').innerText = `Decoding ${file.name}...`;
+      try {
+        const ctx = getAudioContext();
+        const arrayBuffer = await file.arrayBuffer();
+        const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+
+        const bufferKey = 'imported_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        bufferRegistry.set(bufferKey, decodedBuffer);
+
+        const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+        task.tracks[targetTrack].push({
+          id: 'clip_' + Date.now(),
+          name: file.name.replace(/\.[^/.]+$/, ""),
+          start: playheadTime,
+          duration: Math.min(decodedBuffer.duration, MAX_DURATION - playheadTime),
+          color: targetTrack === 0 ? 'from-cyan-600 to-blue-700' : 'from-indigo-600 to-purple-700',
+          bufferKey: bufferKey
+        });
+
+        document.getElementById('export-status').innerText = 'Audio imported cleanly!';
+        renderTimeline();
+        saveToLocalStorage();
+      } catch (err) {
+        console.error('Import audio error:', err);
+        alert('Could not decode audio file. Please ensure it is a valid MP3, WAV, or OGG file.');
+        document.getElementById('export-status').innerText = 'Import error';
+      }
+    }
+
+    // Setup Drag-and-drop on zone and timeline lanes
+    function setupDragAndDrop() {
+      const dropzone = document.getElementById('dropzone');
+      const importInput = document.getElementById('import-audio-input');
+
+      dropzone.addEventListener('click', () => importInput.click());
+      importInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          handleAudioFileImport(e.target.files[0], 0);
+          importInput.value = '';
+        }
+      });
+
+      ['dragenter', 'dragover'].forEach(name => {
+        dropzone.addEventListener(name, (e) => {
           e.preventDefault();
-          lane.classList.add('lane-hover-target');
+          dropzone.classList.add('border-cyan-400', 'bg-cyan-950/20');
         });
-
-        lane.addEventListener('dragleave', () => {
-          lane.classList.remove('lane-hover-target');
+      });
+      ['dragleave', 'drop'].forEach(name => {
+        dropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('border-cyan-400', 'bg-cyan-950/20');
         });
+      });
+      dropzone.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          handleAudioFileImport(e.dataTransfer.files[0], 0);
+        }
+      });
 
+      // Allow dragging files directly onto any timeline track
+      document.querySelectorAll('.track-drop-target').forEach(lane => {
+        lane.addEventListener('dragover', (e) => e.preventDefault());
         lane.addEventListener('drop', (e) => {
           e.preventDefault();
-          lane.classList.remove('lane-hover-target');
-          const dataStr = e.dataTransfer.getData('text/plain');
-          if (!dataStr) return;
-
-          const data = JSON.parse(dataStr);
-          const cur = getCurrentTask();
-          if (!cur) return;
-
-          const rect = lane.getBoundingClientRect();
-          const dropX = e.clientX - rect.left + document.getElementById('timeline-scroll-container').scrollLeft;
-          const pxPerSec = PIXELS_PER_SECOND_BASE * currentZoom;
-          const dropTime = Math.max(0, parseFloat((dropX / pxPerSec).toFixed(2)));
-
-          if (data.origin === 'library') {
-            const sfx = SOUND_LIBRARY.find(s => s.id === data.sfxId);
-            if (sfx) {
-              addSoundToTrack(sfx, i, dropTime);
-            }
-          } else if (data.origin === 'timeline-clip') {
-            const sourceTrack = data.sourceTrack;
-            const clipId = data.clipId;
-            const clipIdx = cur.tracks[sourceTrack].findIndex(c => c.id === clipId);
-
-            if (clipIdx !== -1) {
-              const [movedClip] = cur.tracks[sourceTrack].splice(clipIdx, 1);
-              movedClip.startTime = Math.min(dropTime, MAX_DURATION_SEC - movedClip.duration);
-              cur.tracks[i].push(movedClip);
-              saveToStorage();
-              renderTimelineClips();
-              showToast(`Moved clip to Track ${i + 1}`, 'info');
-            }
+          const trackIdx = parseInt(lane.getAttribute('data-track-id'), 10);
+          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleAudioFileImport(e.dataTransfer.files[0], trackIdx);
           }
         });
-      }
+      });
     }
 
-    function renderRuler() {
-      const ruler = document.getElementById('timeline-ruler');
-      if (!ruler) return;
-      ruler.innerHTML = '';
+    /* ==========================================================================
+       TIMELINE RENDERING & STEPPED NAVIGATION
+       ========================================================================== */
+    function drawRuler() {
+      const canvas = document.getElementById('ruler-canvas');
+      const container = document.getElementById('ruler-container');
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = TOTAL_WIDTH * dpr;
+      canvas.height = 32 * dpr;
+      canvas.style.width = TOTAL_WIDTH + 'px';
+      canvas.style.height = '32px';
 
-      const totalSeconds = MAX_DURATION_SEC;
-      const pxPerSec = PIXELS_PER_SECOND_BASE * currentZoom;
-      ruler.style.width = (totalSeconds * pxPerSec) + 'px';
-      document.getElementById('tracks-lanes-wrapper').style.width = (totalSeconds * pxPerSec) + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = '#161b22';
+      ctx.fillRect(0, 0, TOTAL_WIDTH, 32);
 
-      for (let sec = 0; sec <= totalSeconds; sec += 5) {
-        const tick = document.createElement('div');
-        tick.className = 'absolute top-0 bottom-0 border-l border-slate-700/60 flex items-end pl-1 select-none pointer-events-none';
-        tick.style.left = (sec * pxPerSec) + 'px';
+      ctx.strokeStyle = '#30363d';
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '10px monospace';
+      ctx.lineWidth = 1;
 
-        const mins = Math.floor(sec / 60);
-        const remSecs = sec % 60;
-        tick.textContent = `${mins}:${remSecs < 10 ? '0' : ''}${remSecs}`;
-        ruler.appendChild(tick);
+      for (let sec = 0; sec <= MAX_DURATION; sec++) {
+        const x = sec * PIXELS_PER_SECOND;
+        if (sec % 10 === 0) {
+          ctx.beginPath();
+          ctx.moveTo(x, 14);
+          ctx.lineTo(x, 32);
+          ctx.stroke();
+          const mins = Math.floor(sec / 60);
+          const secs = sec % 60;
+          ctx.fillText(`${mins}:${secs < 10 ? '0' : ''}${secs}`, x + 3, 12);
+        } else if (sec % 5 === 0) {
+          ctx.beginPath();
+          ctx.moveTo(x, 22);
+          ctx.lineTo(x, 32);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(x, 26);
+          ctx.lineTo(x, 32);
+          ctx.stroke();
+        }
       }
 
-      ruler.onclick = (e) => {
-        const rect = ruler.getBoundingClientRect();
-        const clickX = e.clientX - rect.left + document.getElementById('timeline-scroll-container').scrollLeft;
-        const newTime = Math.max(0, Math.min(clickX / pxPerSec, MAX_DURATION_SEC));
-        seekTo(newTime);
+      canvas.onclick = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        seekTo(Math.max(0, Math.min(MAX_DURATION, clickX / PIXELS_PER_SECOND)));
       };
     }
 
-    function renderTimelineClips() {
-      const cur = getCurrentTask();
-      const pxPerSec = PIXELS_PER_SECOND_BASE * currentZoom;
+    function renderTimeline() {
+      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+      if (!task) return;
 
-      for (let i = 0; i < 4; i++) {
-        const lane = document.getElementById(`lane-${i}`);
-        if (!lane) continue;
+      document.querySelectorAll('.track-drop-target').forEach((lane, trackIdx) => {
+        lane.style.width = TOTAL_WIDTH + 'px';
+        lane.innerHTML = '';
 
-        const existingClips = lane.querySelectorAll('.clip-block');
-        existingClips.forEach(el => el.remove());
-
-        if (!cur) continue;
-
-        const clips = cur.tracks[i] || [];
-        clips.forEach((clip) => {
+        task.tracks[trackIdx].forEach(clip => {
           const clipEl = document.createElement('div');
-          clipEl.className = `clip-block absolute h-16 rounded-xl flex items-center justify-between px-3 text-xs font-semibold cursor-move border shadow-lg ${
-            i === 0 ? 'bg-gradient-to-r from-cyan-950/80 to-cyan-900/90 border-cyan-500/70 text-cyan-200' :
-            i === 1 ? 'bg-gradient-to-r from-violet-950/80 to-indigo-900/90 border-violet-500/70 text-violet-200' :
-            i === 2 ? 'bg-gradient-to-r from-emerald-950/80 to-teal-900/90 border-emerald-500/70 text-emerald-200' :
-                      'bg-gradient-to-r from-amber-950/80 to-amber-900/90 border-amber-500/70 text-amber-200'
-          }`;
+          const leftPx = clip.start * PIXELS_PER_SECOND;
+          const widthPx = clip.duration * PIXELS_PER_SECOND;
 
-          clipEl.style.left = (clip.startTime * pxPerSec) + 'px';
-          clipEl.style.width = Math.max(48, clip.duration * pxPerSec) + 'px';
-          clipEl.draggable = true;
+          clipEl.className = `clip-item absolute top-1 bottom-1 rounded bg-gradient-to-r ${clip.color || 'from-cyan-600 to-blue-700'} border border-white/20 p-1 flex items-center justify-between text-xs text-white shadow-md overflow-hidden`;
+          clipEl.style.left = leftPx + 'px';
+          clipEl.style.width = Math.max(widthPx, 24) + 'px';
+          clipEl.setAttribute('data-clip-id', clip.id);
 
-          clipEl.ondragstart = (e) => {
-            e.dataTransfer.setData('text/plain', JSON.stringify({
-              origin: 'timeline-clip',
-              sourceTrack: i,
-              clipId: clip.id
-            }));
+          clipEl.innerHTML = `
+            <span class="truncate text-[11px] font-semibold select-none pl-1">${clip.name}</span>
+            <button class="w-4 h-4 rounded hover:bg-black/30 flex items-center justify-center text-[10px] text-white/70 hover:text-white" onclick="deleteClip('${clip.id}', event)">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          `;
+
+          // Draggable positioning
+          let isDragging = false;
+          let startX = 0;
+          let initialLeft = leftPx;
+
+          clipEl.onmousedown = (e) => {
+            if (e.target.closest('button')) return;
+            isDragging = true;
+            startX = e.clientX;
+            initialLeft = parseFloat(clipEl.style.left) || 0;
+            document.body.style.cursor = 'grabbing';
+
+            const onMouseMove = (moveEvt) => {
+              if (!isDragging) return;
+              const deltaX = moveEvt.clientX - startX;
+              let newLeft = Math.max(0, Math.min(TOTAL_WIDTH - widthPx, initialLeft + deltaX));
+              clipEl.style.left = newLeft + 'px';
+              clip.start = newLeft / PIXELS_PER_SECOND;
+            };
+
+            const onMouseUp = () => {
+              isDragging = false;
+              document.body.style.cursor = '';
+              window.removeEventListener('mousemove', onMouseMove);
+              window.removeEventListener('mouseup', onMouseUp);
+              saveToLocalStorage();
+            };
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
           };
 
-          const label = document.createElement('div');
-          label.className = 'flex items-center space-x-1.5 truncate pointer-events-none';
-          label.innerHTML = `<i class="${clip.icon || 'fa-solid fa-waveform'} text-[11px]"></i><span class="truncate">${clip.name}</span>`;
-
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'text-slate-400 hover:text-rose-400 p-1 rounded transition text-[11px] ml-1 flex-shrink-0';
-          deleteBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-          deleteBtn.onclick = (e) => {
-            e.stopPropagation();
-            cur.tracks[i] = cur.tracks[i].filter(c => c.id !== clip.id);
-            saveToStorage();
-            renderTimelineClips();
-          };
-
-          clipEl.appendChild(label);
-          clipEl.appendChild(deleteBtn);
           lane.appendChild(clipEl);
         });
-      }
-      updateTaskClipStats();
+      });
+
+      updatePlayheadPosition();
     }
 
-    function formatTimecode(sec) {
-      const m = Math.floor(sec / 60);
-      const s = Math.floor(sec % 60);
-      const ms = Math.floor((sec % 1) * 100);
-      return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}.${ms < 10 ? '0' : ''}${ms}`;
+    function deleteClip(clipId, e) {
+      if (e) e.stopPropagation();
+      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+      if (!task) return;
+      task.tracks.forEach(track => {
+        const idx = track.findIndex(c => c.id === clipId);
+        if (idx !== -1) track.splice(idx, 1);
+      });
+      renderTimeline();
+      saveToLocalStorage();
     }
 
     function updatePlayheadPosition() {
-      const pxPerSec = PIXELS_PER_SECOND_BASE * currentZoom;
-      const playhead = document.getElementById('playhead-line');
-      if (playhead) {
-        playhead.style.left = (state.currentTime * pxPerSec) + 'px';
-      }
-      const display = document.getElementById('timecode-display');
-      if (display) {
-        display.textContent = formatTimecode(state.currentTime);
-      }
+      const leftOffset = 192 + (playheadTime * PIXELS_PER_SECOND);
+      document.getElementById('playhead').style.left = leftOffset + 'px';
+
+      const mins = Math.floor(playheadTime / 60);
+      const secs = Math.floor(playheadTime % 60);
+      const ms = Math.floor((playheadTime % 1) * 100);
+      document.getElementById('time-display').innerHTML = 
+        `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}.${ms < 10 ? '0' : ''}${ms} <span class="text-slate-500 text-xs font-normal">/ 03:00.00</span>`;
     }
 
-    function seekTo(timeSec) {
-      const wasPlaying = state.isPlaying;
-      if (state.isPlaying) {
-        pausePlayback();
-      }
-      state.currentTime = Math.max(0, Math.min(timeSec, MAX_DURATION_SEC));
-      state.playbackOffsetTime = state.currentTime;
-      updatePlayheadPosition();
-
-      const container = document.getElementById('timeline-scroll-container');
-      const pxPerSec = PIXELS_PER_SECOND_BASE * currentZoom;
-      const headPx = state.currentTime * pxPerSec;
-      if (headPx < container.scrollLeft || headPx > container.scrollLeft + container.clientWidth) {
-        container.scrollLeft = Math.max(0, headPx - 100);
-      }
-
-      if (wasPlaying) {
+    function seekTo(targetTime) {
+      const clamped = Math.max(0, Math.min(MAX_DURATION, targetTime));
+      playheadTime = clamped;
+      if (isPlaying) {
+        stopPlayback();
         startPlayback();
-      }
-    }
-
-    document.getElementById('btn-jump-start').addEventListener('click', () => seekTo(0));
-    document.getElementById('btn-step-back-5').addEventListener('click', () => seekTo(state.currentTime - 5));
-    document.getElementById('btn-step-back-1').addEventListener('click', () => seekTo(state.currentTime - 1));
-    document.getElementById('btn-step-fwd-1').addEventListener('click', () => seekTo(state.currentTime + 1));
-    document.getElementById('btn-step-fwd-5').addEventListener('click', () => seekTo(state.currentTime + 5));
-    document.getElementById('btn-jump-end').addEventListener('click', () => {
-      const cur = getCurrentTask();
-      if (!cur) return;
-      let maxT = 0;
-      cur.tracks.forEach(tr => tr.forEach(c => {
-        if (c.startTime + c.duration > maxT) maxT = c.startTime + c.duration;
-      }));
-      seekTo(maxT > 0 ? maxT : MAX_DURATION_SEC);
-    });
-
-    window.addEventListener('keydown', (e) => {
-      if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-
-      if (e.code === 'Space') {
-        e.preventDefault();
-        togglePlayback();
-      } else if (e.code === 'ArrowLeft') {
-        e.preventDefault();
-        seekTo(state.currentTime - (e.shiftKey ? 5 : 1));
-      } else if (e.code === 'ArrowRight') {
-        e.preventDefault();
-        seekTo(state.currentTime + (e.shiftKey ? 5 : 1));
-      } else if (e.code === 'Home') {
-        e.preventDefault();
-        seekTo(0);
-      } else if (e.code === 'End') {
-        e.preventDefault();
-        seekTo(MAX_DURATION_SEC);
-      }
-    });
-
-    let playbackAnimFrame = null;
-
-    function togglePlayback() {
-      if (state.isPlaying) {
-        pausePlayback();
       } else {
-        startPlayback();
-      }
-    }
-
-    async function startPlayback() {
-      const ctx = getAudioContext();
-      const cur = getCurrentTask();
-      if (!cur) return;
-
-      state.isPlaying = true;
-      state.playbackStartTime = ctx.currentTime;
-      state.playbackOffsetTime = state.currentTime;
-
-      document.getElementById('play-icon').className = 'fa-solid fa-pause ml-0.5 text-xs';
-      stopActiveSourceNodes();
-
-      const anySolo = trackControls.some(t => t.solo);
-
-      for (let tIdx = 0; tIdx < 4; tIdx++) {
-        const trackClips = cur.tracks[tIdx] || [];
-        const ctrl = trackControls[tIdx];
-
-        if (ctrl.muted || (anySolo && !ctrl.solo)) continue;
-
-        for (const clip of trackClips) {
-          const clipEnd = clip.startTime + clip.duration;
-          if (clipEnd > state.currentTime && clip.startTime < MAX_DURATION_SEC) {
-            const buffer = await resolveClipBufferAsync(ctx, clip);
-            if (!buffer) continue;
-
-            const source = ctx.createBufferSource();
-            source.buffer = buffer;
-
-            // Envelope GainNode to ensure smooth entry and zero clicking
-            const gainNode = ctx.createGain();
-            const offsetInClip = Math.max(0, state.currentTime - clip.startTime);
-            const scheduledStart = Math.max(0, clip.startTime - state.currentTime);
-            const playDuration = clip.duration - offsetInClip;
-
-            // Ramp envelope
-            const startTimePoint = ctx.currentTime + scheduledStart;
-            gainNode.gain.setValueAtTime(0.001, startTimePoint);
-            gainNode.gain.exponentialRampToValueAtTime(ctrl.volume || 0.001, startTimePoint + 0.015);
-
-            source.connect(gainNode);
-            gainNode.connect(ctx.destination);
-
-            source.start(startTimePoint, offsetInClip, playDuration);
-            state.activeSourceNodes.push(source);
-          }
-        }
-      }
-
-      function updatePlayLoop() {
-        if (!state.isPlaying) return;
-        const elapsed = ctx.currentTime - state.playbackStartTime;
-        state.currentTime = state.playbackOffsetTime + elapsed;
-
-        if (state.currentTime >= MAX_DURATION_SEC) {
-          pausePlayback();
-          seekTo(0);
-          return;
-        }
-
         updatePlayheadPosition();
-        playbackAnimFrame = requestAnimationFrame(updatePlayLoop);
-      }
-
-      playbackAnimFrame = requestAnimationFrame(updatePlayLoop);
-    }
-
-    function pausePlayback() {
-      state.isPlaying = false;
-      document.getElementById('play-icon').className = 'fa-solid fa-play ml-0.5 text-xs';
-      if (playbackAnimFrame) {
-        cancelAnimationFrame(playbackAnimFrame);
-      }
-      stopActiveSourceNodes();
-    }
-
-    function stopActiveSourceNodes() {
-      state.activeSourceNodes.forEach(node => {
-        try { node.stop(); } catch (e) {}
-      });
-      state.activeSourceNodes = [];
-    }
-
-    document.getElementById('btn-play').addEventListener('click', togglePlayback);
-
-    function setTrackVolume(trackIdx, val) {
-      trackControls[trackIdx].volume = parseFloat(val);
-    }
-
-    function toggleMute(trackIdx) {
-      trackControls[trackIdx].muted = !trackControls[trackIdx].muted;
-      const btn = document.getElementById(`mute-btn-${trackIdx}`);
-      if (trackControls[trackIdx].muted) {
-        btn.classList.add('bg-rose-600', 'text-white');
-        btn.classList.remove('bg-panel-800', 'text-slate-400');
-      } else {
-        btn.classList.remove('bg-rose-600', 'text-white');
-        btn.classList.add('bg-panel-800', 'text-slate-400');
-      }
-      if (state.isPlaying) {
-        pausePlayback();
-        startPlayback();
       }
     }
 
-    function toggleSolo(trackIdx) {
-      trackControls[trackIdx].solo = !trackControls[trackIdx].solo;
-      const btn = document.getElementById(`solo-btn-${trackIdx}`);
-      if (trackControls[trackIdx].solo) {
-        btn.classList.add('bg-amber-500', 'text-slate-950');
-        btn.classList.remove('bg-panel-800', 'text-slate-400');
-      } else {
-        btn.classList.remove('bg-amber-500', 'text-slate-950');
-        btn.classList.add('bg-panel-800', 'text-slate-400');
-      }
-      if (state.isPlaying) {
-        pausePlayback();
-        startPlayback();
-      }
-    }
+    /* Transport button listeners */
+    document.getElementById('btn-jump-start').onclick = () => seekTo(0);
+    document.getElementById('btn-step-back-5').onclick = () => seekTo(playheadTime - 5);
+    document.getElementById('btn-step-back-1').onclick = () => seekTo(playheadTime - 1);
+    document.getElementById('btn-step-fwd-1').onclick = () => seekTo(playheadTime + 1);
+    document.getElementById('btn-step-fwd-5').onclick = () => seekTo(playheadTime + 5);
+    document.getElementById('btn-jump-end').onclick = () => seekTo(MAX_DURATION);
 
-    function clearTrack(trackIdx) {
-      const cur = getCurrentTask();
-      if (!cur) return;
-      cur.tracks[trackIdx] = [];
-      saveToStorage();
-      renderTimelineClips();
-      showToast(`Cleared Track ${trackIdx + 1}`, 'info');
-    }
+    /* ==========================================================================
+       REAL-TIME MULTI-TRACK PLAYBACK ENGINE
+       ========================================================================== */
+    function startPlayback() {
+      const ctx = getAudioContext();
+      activeNodes = [];
+      playbackStartTime = ctx.currentTime - playheadTime;
 
-    let mediaRecorder = null;
-    let recordedAudioChunks = [];
-    let recordedBuffer = null;
-    let recognition = null;
-    let isSttRunning = false;
-    let recTimerInterval = null;
-    let recSeconds = 0;
+      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+      const anySolo = appState.trackSettings.some(ts => ts.solo);
 
-    const btnRecordMic = document.getElementById('btn-record-mic');
-    btnRecordMic.addEventListener('click', async () => {
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-        clearInterval(recTimerInterval);
-        document.getElementById('mic-pulse').classList.add('hidden');
-        document.getElementById('mic-status-icon').className = 'fa-solid fa-microphone text-lg text-slate-400';
-        document.getElementById('mic-status-text').textContent = 'Recording Complete';
-        document.getElementById('record-btn-text').textContent = 'Record Again';
-        return;
-      }
+      task.tracks.forEach((track, trackIdx) => {
+        const settings = appState.trackSettings[trackIdx];
+        const isMuted = settings.muted || (anySolo && !settings.solo);
+        if (isMuted) return;
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        recordedAudioChunks = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) recordedAudioChunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = async () => {
-          const blob = new Blob(recordedAudioChunks, { type: 'audio/webm' });
-          const arrayBuf = await blob.arrayBuffer();
-          const ctx = getAudioContext();
-          const rawBuffer = await decodeAudioDataPromise(ctx, arrayBuf);
-          recordedBuffer = sanitizeAudioBuffer(ctx, rawBuffer);
-          document.getElementById('recorded-audio-actions').classList.remove('hidden');
-        };
-
-        mediaRecorder.start();
-        recSeconds = 0;
-        document.getElementById('rec-timer').classList.remove('hidden');
-        document.getElementById('mic-pulse').classList.remove('hidden');
-        document.getElementById('mic-status-icon').className = 'fa-solid fa-microphone text-lg text-rose-500 animate-pulse';
-        document.getElementById('mic-status-text').textContent = 'Recording Microphone...';
-        document.getElementById('record-btn-text').textContent = 'Stop Recording';
-
-        recTimerInterval = setInterval(() => {
-          recSeconds += 0.1;
-          document.getElementById('rec-timer').textContent = formatTimecode(recSeconds);
-          if (recSeconds >= MAX_DURATION_SEC) {
-            mediaRecorder.stop();
-          }
-        }, 100);
-
-      } catch (err) {
-        console.error(err);
-        showToast('Microphone access denied or unavailable', 'warning');
-      }
-    });
-
-    document.getElementById('btn-add-mic-to-track').addEventListener('click', () => {
-      if (!recordedBuffer) return;
-      const cur = getCurrentTask();
-      if (!cur) return;
-      const targetTrack = parseInt(document.getElementById('mic-target-track').value, 10);
-      const clipId = 'clip_mic_' + Date.now();
-      window.clipBufferRegistry[clipId] = recordedBuffer;
-
-      const newClip = {
-        id: clipId,
-        type: 'recording',
-        name: `Mic Recording (${recordedBuffer.duration.toFixed(1)}s)`,
-        icon: 'fa-microphone',
-        startTime: state.currentTime,
-        duration: parseFloat(recordedBuffer.duration.toFixed(2))
-      };
-
-      cur.tracks[targetTrack].push(newClip);
-      saveToStorage();
-      renderTimelineClips();
-      showToast(`Added mic recording to Track ${targetTrack + 1}`, 'success');
-      document.getElementById('recorded-audio-actions').classList.add('hidden');
-    });
-
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRec) {
-      recognition = new SpeechRec();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          transcript += event.results[i][0].transcript;
-        }
-        document.getElementById('stt-output-box').textContent = transcript;
-      };
-
-      recognition.onerror = () => {
-        isSttRunning = false;
-        document.getElementById('stt-status-label').textContent = 'Start STT';
-      };
-    }
-
-    document.getElementById('btn-toggle-stt').addEventListener('click', () => {
-      if (!recognition) {
-        showToast('Speech recognition not supported in this browser', 'warning');
-        return;
-      }
-      if (isSttRunning) {
-        recognition.stop();
-        isSttRunning = false;
-        document.getElementById('stt-status-label').textContent = 'Start STT';
-      } else {
-        recognition.start();
-        isSttRunning = true;
-        document.getElementById('stt-status-label').textContent = 'Listening...';
-        showToast('Speech-to-text active. Speak clearly.', 'info');
-      }
-    });
-
-    document.getElementById('btn-convert-stt-tts').addEventListener('click', () => {
-      const text = document.getElementById('stt-output-box').textContent.trim();
-      if (!text || text === 'Spoken words will transcribe live here...') {
-        showToast('No transcribed text found to convert', 'warning');
-        return;
-      }
-      document.getElementById('tts-input').value = text;
-      switchStudioTab('tts');
-      showToast('Transferred transcript to Text-to-Speech studio!', 'success');
-    });
-
-    async function resolveClipBufferAsync(ctx, clip) {
-      if (clip.type === 'library') {
-        const sfx = SOUND_LIBRARY.find(s => s.id === clip.libraryId);
-        return sfx ? sfx.synth(ctx) : null;
-      }
-      if (window.clipBufferRegistry[clip.id]) {
-        return window.clipBufferRegistry[clip.id];
-      }
-      if (clip.type === 'tts' && clip.text) {
-        const buf = await fetchNaturalSpeechBuffer(ctx, clip.text, clip.voice || 'Russell', clip.rate || 1.0, clip.pitch || 1.0);
-        window.clipBufferRegistry[clip.id] = buf;
-        return buf;
-      }
-      return null;
-    }
-
-    async function renderMixdownBuffer() {
-      const cur = getCurrentTask();
-      if (!cur) return null;
-
-      let maxTime = 3;
-      cur.tracks.forEach(track => {
         track.forEach(clip => {
-          if (clip.startTime + clip.duration > maxTime) {
-            maxTime = clip.startTime + clip.duration;
+          const clipEnd = clip.start + clip.duration;
+          if (clipEnd > playheadTime) {
+            const buf = bufferRegistry.get(clip.bufferKey);
+            if (!buf) return;
+
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+
+            const gain = ctx.createGain();
+            gain.gain.value = settings.volume;
+
+            src.connect(gain);
+            gain.connect(ctx.destination);
+
+            let offset = 0;
+            let startAt = 0;
+
+            if (playheadTime >= clip.start) {
+              offset = playheadTime - clip.start;
+              startAt = ctx.currentTime;
+            } else {
+              offset = 0;
+              startAt = ctx.currentTime + (clip.start - playheadTime);
+            }
+
+            src.start(startAt, offset);
+            activeNodes.push(src);
           }
         });
       });
-      maxTime = Math.min(Math.ceil(maxTime + 0.8), MAX_DURATION_SEC);
 
-      const sampleRate = 44100;
-      const offlineCtx = new OfflineAudioContext(2, sampleRate * maxTime, sampleRate);
-      const anySolo = trackControls.some(t => t.solo);
+      isPlaying = true;
+      document.getElementById('play-pause-icon').className = 'fa-solid fa-pause text-base';
 
-      for (let trackIdx = 0; trackIdx < 4; trackIdx++) {
-        const track = cur.tracks[trackIdx];
-        const ctrl = trackControls[trackIdx];
-        if (ctrl.muted || (anySolo && !ctrl.solo)) continue;
-
-        for (const clip of track) {
-          const buffer = await resolveClipBufferAsync(offlineCtx, clip);
-          if (buffer) {
-            const src = offlineCtx.createBufferSource();
-            src.buffer = buffer;
-            const gain = offlineCtx.createGain();
-            gain.gain.value = ctrl.volume;
-            src.connect(gain);
-            gain.connect(offlineCtx.destination);
-            src.start(clip.startTime);
-          }
+      const tick = () => {
+        playheadTime = ctx.currentTime - playbackStartTime;
+        if (playheadTime >= MAX_DURATION) {
+          seekTo(0);
+          stopPlayback();
+          return;
         }
+        updatePlayheadPosition();
+        animationFrameId = requestAnimationFrame(tick);
+      };
+      animationFrameId = requestAnimationFrame(tick);
+    }
+
+    function stopPlayback() {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      activeNodes.forEach(node => {
+        try { node.stop(); } catch (e) {}
+      });
+      activeNodes = [];
+      isPlaying = false;
+      document.getElementById('play-pause-icon').className = 'fa-solid fa-play text-base';
+      updatePlayheadPosition();
+    }
+
+    document.getElementById('btn-play-pause').onclick = () => {
+      if (isPlaying) stopPlayback();
+      else startPlayback();
+    };
+
+    /* Keyboard Shortcuts */
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        document.getElementById('btn-play-pause').click();
+      } else if (e.code === 'ArrowLeft') {
+        seekTo(playheadTime - (e.shiftKey ? 5 : 1));
+      } else if (e.code === 'ArrowRight') {
+        seekTo(playheadTime + (e.shiftKey ? 5 : 1));
+      } else if (e.code === 'Home') {
+        seekTo(0);
+      } else if (e.code === 'End') {
+        seekTo(MAX_DURATION);
+      }
+    });
+
+    /* Track Volume / Mute / Solo Controls */
+    function setTrackVolume(idx, val) {
+      appState.trackSettings[idx].volume = parseFloat(val);
+      saveToLocalStorage();
+    }
+
+    function toggleMute(idx) {
+      appState.trackSettings[idx].muted = !appState.trackSettings[idx].muted;
+      updateTrackButtons();
+      saveToLocalStorage();
+      if (isPlaying) { stopPlayback(); startPlayback(); }
+    }
+
+    function toggleSolo(idx) {
+      appState.trackSettings[idx].solo = !appState.trackSettings[idx].solo;
+      updateTrackButtons();
+      saveToLocalStorage();
+      if (isPlaying) { stopPlayback(); startPlayback(); }
+    }
+
+    function updateTrackButtons() {
+      document.querySelectorAll('.track-lane').forEach((lane, idx) => {
+        const st = appState.trackSettings[idx];
+        const btnMute = lane.querySelector('.btn-mute');
+        const btnSolo = lane.querySelector('.btn-solo');
+
+        btnMute.className = `btn-mute flex-1 py-0.5 rounded text-[10px] font-bold ${st.muted ? 'bg-rose-700 text-white' : 'bg-[#21262d] text-slate-300'}`;
+        btnSolo.className = `btn-solo flex-1 py-0.5 rounded text-[10px] font-bold ${st.solo ? 'bg-amber-600 text-white' : 'bg-[#21262d] text-slate-300'}`;
+      });
+    }
+
+    function clearTrack(idx) {
+      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+      if (task && confirm(`Clear all audio clips on Track ${idx + 1}?`)) {
+        task.tracks[idx] = [];
+        renderTimeline();
+        saveToLocalStorage();
+      }
+    }
+
+    /* ==========================================================================
+       OFFLINE AUDIO RENDERING & EXPORT (WAV & MP3)
+       ========================================================================== */
+    async function renderMixdownBuffer() {
+      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+      let maxEnd = 0;
+      task.tracks.forEach(track => {
+        track.forEach(clip => {
+          if (clip.start + clip.duration > maxEnd) maxEnd = clip.start + clip.duration;
+        });
+      });
+
+      if (maxEnd === 0) {
+        alert('There are no clips in this task to export.');
+        return null;
       }
 
+      const totalRenderTime = Math.min(MAX_DURATION, Math.max(maxEnd + 0.5, 1));
+      const sampleRate = 44100;
+      const offlineCtx = new OfflineAudioContext(2, Math.floor(sampleRate * totalRenderTime), sampleRate);
+
+      const anySolo = appState.trackSettings.some(ts => ts.solo);
+
+      task.tracks.forEach((track, trackIdx) => {
+        const settings = appState.trackSettings[trackIdx];
+        const isMuted = settings.muted || (anySolo && !settings.solo);
+        if (isMuted) return;
+
+        track.forEach(clip => {
+          const buf = bufferRegistry.get(clip.bufferKey);
+          if (!buf) return;
+
+          const src = offlineCtx.createBufferSource();
+          src.buffer = buf;
+          const gain = offlineCtx.createGain();
+          gain.gain.value = settings.volume;
+
+          src.connect(gain);
+          gain.connect(offlineCtx.destination);
+          src.start(clip.start);
+        });
+      });
+
+      document.getElementById('export-status').innerText = 'Rendering audio mixdown...';
       return await offlineCtx.startRendering();
     }
 
-    function audioBufferToWav(buffer) {
+    // WAV 16-bit PCM Encoder
+    function audioBufferToWavBlob(buffer) {
       const numOfChan = buffer.numberOfChannels;
       const length = buffer.length * numOfChan * 2 + 44;
       const out = new DataView(new ArrayBuffer(length));
+      const channels = [];
+      let sample = 0;
+      let offset = 0;
       let pos = 0;
 
       function setUint16(data) { out.setUint16(pos, data, true); pos += 2; }
       function setUint32(data) { out.setUint32(pos, data, true); pos += 4; }
 
-      // RIFF identifier
-      setUint32(0x46464952);
+      // Write WAV Header
+      setUint32(0x46464952); // "RIFF"
       setUint32(length - 8);
-      setUint32(0x45564157); // WAVE
-
-      // Format chunk
-      setUint32(0x20746d66); // 'fmt '
-      setUint32(16);
-      setUint16(1);  // PCM
+      setUint32(0x45564157); // "WAVE"
+      setUint32(0x20746d66); // "fmt " chunk
+      setUint32(16);         // length = 16
+      setUint16(1);          // PCM (uncompressed)
       setUint16(numOfChan);
       setUint32(buffer.sampleRate);
       setUint32(buffer.sampleRate * 2 * numOfChan);
       setUint16(numOfChan * 2);
-      setUint16(16);
-
-      // Data chunk
-      setUint32(0x61746164); // 'data'
+      setUint16(16);         // 16-bit
+      setUint32(0x61746164); // "data" chunk
       setUint32(length - pos - 4);
 
-      const channels = [];
-      for (let i = 0; i < numOfChan; i++) {
+      for (let i = 0; i < buffer.numberOfChannels; i++) {
         channels.push(buffer.getChannelData(i));
       }
 
-      for (let i = 0; i < buffer.length; i++) {
-        for (let ch = 0; ch < numOfChan; ch++) {
-          let sample = Math.max(-1, Math.min(1, channels[ch][i]));
+      while (offset < buffer.length) {
+        for (let i = 0; i < numOfChan; i++) {
+          sample = Math.max(-1, Math.min(1, channels[i][offset]));
           sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
           out.setInt16(pos, sample, true);
           pos += 2;
         }
+        offset++;
       }
 
       return new Blob([out.buffer], { type: 'audio/wav' });
     }
 
-    function audioBufferToMp3(buffer) {
+    // MP3 LameJS Encoder
+    function audioBufferToMp3Blob(buffer) {
       const channels = buffer.numberOfChannels;
       const sampleRate = buffer.sampleRate;
       const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, 192);
@@ -2193,16 +1244,16 @@
       const rightInt16 = new Int16Array(right.length);
 
       for (let i = 0; i < left.length; i++) {
-        leftInt16[i] = left[i] < 0 ? left[i] * 0x8000 : left[i] * 0x7FFF;
-        rightInt16[i] = right[i] < 0 ? right[i] * 0x8000 : right[i] * 0x7FFF;
+        leftInt16[i] = Math.max(-32768, Math.min(32767, left[i] * 32767));
+        rightInt16[i] = Math.max(-32768, Math.min(32767, right[i] * 32767));
       }
 
-      for (let i = 0; i < left.length; i += sampleBlockSize) {
+      for (let i = 0; i < leftInt16.length; i += sampleBlockSize) {
         const leftChunk = leftInt16.subarray(i, i + sampleBlockSize);
         const rightChunk = rightInt16.subarray(i, i + sampleBlockSize);
-        const mp3buf = channels === 1 
-          ? mp3encoder.encodeBuffer(leftChunk)
-          : mp3encoder.encodeBuffer(leftChunk, rightChunk);
+        const mp3buf = channels === 2 
+          ? mp3encoder.encodeBuffer(leftChunk, rightChunk) 
+          : mp3encoder.encodeBuffer(leftChunk);
         if (mp3buf.length > 0) mp3Data.push(mp3buf);
       }
 
@@ -2212,211 +1263,113 @@
       return new Blob(mp3Data, { type: 'audio/mp3' });
     }
 
-    function triggerDownload(blob, filename) {
+    document.getElementById('btn-export-wav').onclick = async () => {
+      const rendered = await renderMixdownBuffer();
+      if (!rendered) return;
+      const blob = audioBufferToWavBlob(rendered);
+      const activeTask = appState.tasks.find(t => t.id === appState.activeTaskId);
+      const filename = `${activeTask.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.wav`;
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
-      document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
+      document.getElementById('export-status').innerText = 'Exported WAV successfully!';
+    };
 
-    document.getElementById('btn-export-wav').addEventListener('click', async () => {
-      const cur = getCurrentTask();
-      if (!cur) return;
-      showToast('Rendering WAV mixdown...', 'info');
+    document.getElementById('btn-export-mp3').onclick = async () => {
+      const rendered = await renderMixdownBuffer();
+      if (!rendered) return;
+      const blob = audioBufferToMp3Blob(rendered);
+      const activeTask = appState.tasks.find(t => t.id === appState.activeTaskId);
+      const filename = `${activeTask.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
 
-      try {
-        const renderedBuffer = await renderMixdownBuffer();
-        if (!renderedBuffer) return;
-        const wavBlob = audioBufferToWav(renderedBuffer);
-        const safeName = (cur.name || 'Mixdown').replace(/[^a-z0-9_-]/gi, '_');
-        triggerDownload(wavBlob, `${safeName}.wav`);
-        showToast('WAV export complete!', 'success');
-      } catch (err) {
-        console.error(err);
-        showToast('Export failed. Check audio sources.', 'warning');
-      }
-    });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      document.getElementById('export-status').innerText = 'Exported MP3 successfully!';
+    };
 
-    document.getElementById('btn-export-mp3').addEventListener('click', async () => {
-      const cur = getCurrentTask();
-      if (!cur) return;
-      showToast('Rendering and encoding MP3 mixdown...', 'info');
-
-      try {
-        const renderedBuffer = await renderMixdownBuffer();
-        if (!renderedBuffer) return;
-        const mp3Blob = audioBufferToMp3(renderedBuffer);
-        const safeName = (cur.name || 'Mixdown').replace(/[^a-z0-9_-]/gi, '_');
-        triggerDownload(mp3Blob, `${safeName}.mp3`);
-        showToast('MP3 export complete!', 'success');
-      } catch (err) {
-        console.error(err);
-        showToast('MP3 encoding failed.', 'warning');
-      }
-    });
-
-    document.getElementById('btn-clear-task').addEventListener('click', () => {
-      const cur = getCurrentTask();
-      if (!cur) return;
-      if (confirm(`Remove all clips from "${cur.name}"?`)) {
-        cur.tracks = [[], [], [], []];
-        saveToStorage();
-        renderTimelineClips();
-        showToast('Cleared all tracks for this task', 'info');
-      }
-    });
-
-    function switchStudioTab(tab) {
-      ['tts', 'library', 'generator', 'mic'].forEach(t => {
-        const panel = document.getElementById(`panel-${t}`);
+    /* Tab switcher for left sidebar */
+    window.switchSidebarTab = function(tabName) {
+      ['sfx', 'foley', 'ambience'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tabName);
         const btn = document.getElementById(`tab-btn-${t}`);
-        if (panel && btn) {
-          if (t === tab) {
-            panel.classList.remove('hidden');
-            btn.className = 'flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg bg-panel-800 text-indigo-400 shadow-sm transition whitespace-nowrap';
-          } else {
-            panel.classList.add('hidden');
-            btn.className = 'flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition whitespace-nowrap';
-          }
+        if (t === tabName) {
+          btn.className = 'flex-1 py-2.5 text-center text-cyan-400 border-b-2 border-cyan-400 transition';
+        } else {
+          btn.className = 'flex-1 py-2.5 text-center text-slate-400 hover:text-white transition';
         }
       });
-    }
+    };
 
-    document.getElementById('btn-zoom-in').addEventListener('click', () => {
-      currentZoom = Math.min(2.5, currentZoom + 0.25);
-      renderRuler();
-      renderTimelineClips();
-      updatePlayheadPosition();
-    });
+    /* Procedural Foley/Ambience bindings */
+    document.getElementById('btn-preview-foley').onclick = () => {
+      const type = document.getElementById('foley-type-select').value;
+      const damp = parseFloat(document.getElementById('foley-damp').value);
+      previewBuffer(generateFoleyBuffer(type, damp));
+    };
 
-    document.getElementById('btn-zoom-out').addEventListener('click', () => {
-      currentZoom = Math.max(0.6, currentZoom - 0.25);
-      renderRuler();
-      renderTimelineClips();
-      updatePlayheadPosition();
-    });
+    document.getElementById('btn-add-foley').onclick = () => {
+      const type = document.getElementById('foley-type-select').value;
+      const damp = parseFloat(document.getElementById('foley-damp').value);
+      const buf = generateFoleyBuffer(type, damp);
+      const bufferKey = 'foley_' + Date.now();
+      bufferRegistry.set(bufferKey, buf);
 
-    function showToast(msg, type = 'info') {
-      const toast = document.getElementById('toast');
-      const icon = document.getElementById('toast-icon');
-      const label = document.getElementById('toast-message');
-      if (!toast || !label) return;
+      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+      task.tracks[2].push({
+        id: 'clip_' + Date.now(),
+        name: 'Foley: ' + type,
+        start: playheadTime,
+        duration: buf.duration,
+        color: 'from-orange-600 to-amber-700',
+        bufferKey: bufferKey
+      });
+      renderTimeline();
+      saveToLocalStorage();
+    };
 
-      label.textContent = msg;
-      if (type === 'success') {
-        icon.className = 'fa-solid fa-circle-check text-emerald-400';
-      } else if (type === 'warning') {
-        icon.className = 'fa-solid fa-triangle-exclamation text-amber-400';
-      } else {
-        icon.className = 'fa-solid fa-info-circle text-cyan-400';
-      }
+    document.getElementById('btn-preview-ambience').onclick = () => {
+      const type = document.getElementById('ambience-type-select').value;
+      previewBuffer(generateAmbienceBuffer(type, 3));
+    };
 
-      toast.classList.remove('translate-y-20', 'opacity-0');
-      toast.classList.add('translate-y-0', 'opacity-100');
+    document.getElementById('btn-add-ambience').onclick = () => {
+      const type = document.getElementById('ambience-type-select').value;
+      const dur = parseFloat(document.getElementById('ambience-dur').value);
+      const buf = generateAmbienceBuffer(type, dur);
+      const bufferKey = 'ambience_' + Date.now();
+      bufferRegistry.set(bufferKey, buf);
 
-      setTimeout(() => {
-        toast.classList.add('translate-y-20', 'opacity-0');
-        toast.classList.remove('translate-y-0', 'opacity-100');
-      }, 2600);
-    }
+      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+      task.tracks[3].push({
+        id: 'clip_' + Date.now(),
+        name: 'Ambience: ' + type,
+        start: playheadTime,
+        duration: buf.duration,
+        color: 'from-emerald-700 to-teal-800',
+        bufferKey: bufferKey
+      });
+      renderTimeline();
+      saveToLocalStorage();
+    };
 
-    async function initializeStudio() {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          state.tasks = JSON.parse(saved);
-        }
-      } catch (err) {
-        console.warn('Could not read from local storage:', err);
-      }
-
-      if (!state.tasks || !Array.isArray(state.tasks) || state.tasks.length === 0) {
-        const defaultTask = createDefaultTask("Task 1: Full Scene");
-        state.tasks = [defaultTask];
-        state.currentTaskId = defaultTask.id;
-        
-        const ctx = getAudioContext();
-        const initialSpeechText = "SonicForge online. All tracks calibrated.";
-        const speechBuf = await fetchNaturalSpeechBuffer(ctx, initialSpeechText, 'Russell');
-        const clipSpeechId = 'clip_init_speech';
-        window.clipBufferRegistry[clipSpeechId] = speechBuf;
-        
-        defaultTask.tracks[0].push({
-          id: clipSpeechId,
-          type: 'tts',
-          name: 'TTS: "SonicForge online..."',
-          text: initialSpeechText,
-          voice: 'Russell',
-          startTime: 0.5,
-          duration: parseFloat(speechBuf.duration.toFixed(2)),
-          icon: 'fa-solid fa-comment-dots'
-        });
-
-        const sfx = SOUND_LIBRARY.find(s => s.id === 'sfx_laser');
-        if (sfx) {
-          defaultTask.tracks[1].push({
-            id: 'clip_init_laser',
-            type: 'library',
-            libraryId: sfx.id,
-            name: sfx.name,
-            startTime: 3.2,
-            duration: 0.35,
-            icon: 'fa-crosshairs'
-          });
-        }
-
-        const foley = SOUND_LIBRARY.find(s => s.id === 'foley_footsteps');
-        if (foley) {
-          defaultTask.tracks[2].push({
-            id: 'clip_init_steps',
-            type: 'library',
-            libraryId: foley.id,
-            name: foley.name,
-            startTime: 3.8,
-            duration: 2.2,
-            icon: 'fa-shoe-prints'
-          });
-        }
-
-        const amb = SOUND_LIBRARY.find(s => s.id === 'amb_drone');
-        if (amb) {
-          defaultTask.tracks[3].push({
-            id: 'clip_init_amb',
-            type: 'library',
-            libraryId: amb.id,
-            name: amb.name,
-            startTime: 0.0,
-            duration: 5.5,
-            icon: 'fa-satellite-dish'
-          });
-        }
-      } else {
-        if (!state.currentTaskId || !state.tasks.some(t => t.id === state.currentTaskId)) {
-          state.currentTaskId = state.tasks[0].id;
-        }
-      }
-
-      saveToStorage();
-      renderTasksList();
-      updateTaskHeading();
-      renderRuler();
-      renderTimelineClips();
-      renderSoundLibrary();
-      setupLaneDropZones();
-      updatePlayheadPosition();
-
-      const btnNewTask = document.getElementById('btn-new-task');
-      if (btnNewTask) {
-        btnNewTask.onclick = addNewTask;
-      }
-    }
-
+    /* ==========================================================================
+       INIT
+       ========================================================================== */
     window.addEventListener('DOMContentLoaded', () => {
-      initializeStudio();
+      loadFromLocalStorage();
+      document.getElementById('btn-add-task').onclick = addNewTask;
+      renderTasks();
+      drawRuler();
+      renderSfxList();
+      renderTimeline();
+      updateTrackButtons();
+      setupDragAndDrop();
     });
   </script>
 </body>
