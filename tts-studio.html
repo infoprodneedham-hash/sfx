@@ -3,70 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Standalone TTS & Speech Studio</title>
+  <title>TTS Speech Studio & Master Timeline</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
   <style>
-    body { background-color: #0d1117; color: #c9d1d9; font-family: system-ui, -apple-system, sans-serif; }
-    ::-webkit-scrollbar { width: 6px; }
+    body { background-color: #0d1117; color: #c9d1d9; font-family: system-ui, -apple-system, sans-serif; user-select: none; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+    ::-webkit-scrollbar-track { background: #161b22; }
+    .timeline-stripe {
+      background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03) 10px, transparent 10px, transparent 20px);
+    }
   </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-  <div class="max-w-xl w-full bg-[#161b22] border border-[#30363d] rounded-2xl shadow-2xl p-6 space-y-5">
+  <div class="max-w-2xl w-full bg-[#161b22] border border-[#30363d] rounded-2xl shadow-2xl p-6 space-y-5">
     
     <!-- HEADER -->
     <div class="flex items-center justify-between border-b border-[#30363d] pb-4">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-900/30">
-          <i class="fa-solid fa-microphone-lines text-white text-lg"></i>
+          <i class="fa-solid fa-layer-group text-white text-lg"></i>
         </div>
         <div>
           <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-            TTS Audio Generator <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v7.2</span>
+            Speech Studio & Sequence Timeline <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v8.0 PRO</span>
           </h1>
-          <p class="text-xs text-slate-400">Export clean human speech files for SoundForge DAW</p>
+          <p class="text-xs text-slate-400">Build sequenced dialogue tracks for SoundForge DAW</p>
         </div>
       </div>
       <span class="text-xs px-2.5 py-1 bg-emerald-950/80 text-emerald-400 border border-emerald-800 rounded-full font-mono flex items-center gap-1.5" id="engine-badge">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Ready
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Studio Ready
       </span>
     </div>
 
-    <!-- LOCALHOST NOTICE (Shows if opened as file://) -->
-    <div id="file-protocol-warning" class="hidden p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl text-xs text-amber-300">
-      <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-400"></i>
-      <strong>Opened as local file:</strong> Browsers hide the "Current Tab" option on <code>file://</code> URLs. For tab capture, serve this folder via <strong>VS Code Live Server</strong> or <code>python -m http.server</code> and visit <code>http://localhost:...</code>
-    </div>
-
-    <!-- SPEECH-TO-TEXT DICTATION QUICK BAR -->
+    <!-- VOICE DICTATION (SPEECH-TO-TEXT) -->
     <div class="flex items-center justify-between bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
       <div class="text-xs text-slate-300">
         <span class="font-semibold block text-white">Voice Dictation (Speech-to-Text)</span>
-        <span id="stt-status-text">Dictate into your mic to append speech dialogue below.</span>
+        <span id="stt-status-text">Dictate with your mic to convert spoken words into text below.</span>
       </div>
       <button id="btn-stt" class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 rounded-lg text-xs font-bold border border-[#30363d] flex items-center gap-1.5 transition">
         <i class="fa-solid fa-microphone" id="stt-mic-icon"></i> <span id="stt-label">Dictate Text</span>
       </button>
     </div>
 
-    <!-- DIALOGUE SCRIPT INPUT -->
+    <!-- SCRIPT INPUT AREA -->
     <div>
       <div class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
-        <span>Dialogue / Speech Script:</span>
+        <span>Dialogue Segment Input:</span>
         <span class="text-slate-500 text-[11px]" id="char-count">0 characters</span>
       </div>
-      <textarea id="tts-input" rows="4" class="w-full bg-[#0d1117] border border-[#30363d] rounded-xl p-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition leading-relaxed" placeholder="Type or dictate speech dialogue here...">Hello and welcome to the project timeline. This track is ready for production.</textarea>
+      <textarea id="tts-input" rows="3" class="w-full bg-[#0d1117] border border-[#30363d] rounded-xl p-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition leading-relaxed" placeholder="Type or dictate a sentence or dialogue block here...">Hello and welcome to the project timeline. This track is ready for production.</textarea>
     </div>
 
-    <!-- VOICE SELECTION & PROFILES -->
+    <!-- VOICE SETTINGS -->
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <label class="block text-xs font-semibold text-slate-300 mb-1">Human Voice Character</label>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">Voice Character</label>
         <select id="voice-preset" class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg p-2 text-xs text-white focus:outline-none focus:border-cyan-500">
-          <option value="">Scanning installed system voices...</option>
+          <option value="">Detecting available voices...</option>
         </select>
       </div>
 
@@ -81,36 +79,67 @@
       </div>
     </div>
 
-    <!-- LIVE PREVIEW AUDIO PLAYER -->
-    <div class="bg-[#0d1117] p-3 rounded-xl border border-[#30363d] flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <button id="btn-preview-tts" class="w-10 h-10 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white flex items-center justify-center transition shadow-md shadow-cyan-900/30">
-          <i class="fa-solid fa-play text-sm" id="preview-icon"></i>
-        </button>
-        <div>
-          <div class="text-xs font-semibold text-white">Live Voice Preview</div>
-          <div class="text-[11px] text-slate-400" id="preview-status">Ready to test voice</div>
-        </div>
-      </div>
-      <div class="text-xs font-mono text-cyan-400 font-bold" id="duration-display">Live Mode</div>
+    <!-- PREVIEW & ADD-TO-TIMELINE ACTIONS -->
+    <div class="flex items-center gap-3">
+      <button id="btn-preview-tts" class="flex-1 py-2 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-[#30363d] transition">
+        <i class="fa-solid fa-play text-xs" id="preview-icon"></i> Preview Current Line
+      </button>
+
+      <button id="btn-add-clip" class="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/30 transition">
+        <i class="fa-solid fa-plus text-xs"></i> Add to Voice Timeline
+      </button>
     </div>
 
-    <!-- EXPORT ACTIONS -->
+    <!-- MINI VOICE TIMELINE WORKSPACE -->
+    <div class="bg-[#0d1117] p-3 rounded-xl border border-[#30363d] space-y-3">
+      <div class="flex items-center justify-between border-b border-[#30363d] pb-2">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+          <span class="text-xs font-bold text-white uppercase tracking-wider">Voice Track 1 (Sequencer)</span>
+          <span class="text-[11px] text-slate-500" id="clip-count-label">0 clips queued</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-clear-timeline" class="text-[11px] text-rose-400 hover:text-rose-300 font-medium transition" title="Clear All Clips">
+            <i class="fa-solid fa-trash-can mr-1"></i> Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- SEQUENCE CLIPS VIEW -->
+      <div id="timeline-container" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+        <div class="p-4 text-center text-xs text-slate-500 italic timeline-stripe border border-dashed border-[#30363d] rounded-lg" id="empty-timeline-hint">
+          No dialogue clips added yet. Add lines above to chain them in sequence.
+        </div>
+      </div>
+
+      <!-- SEQUENCE TRANSPORT CONTROLS -->
+      <div class="flex items-center justify-between pt-1">
+        <div class="flex items-center space-x-2">
+          <button id="btn-play-sequence" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition disabled:opacity-50" disabled>
+            <i class="fa-solid fa-play text-xs" id="seq-play-icon"></i> Play Full Sequence
+          </button>
+          <button id="btn-stop-sequence" class="px-2.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-slate-300 rounded-lg text-xs font-bold transition">
+            <i class="fa-solid fa-stop"></i>
+          </button>
+        </div>
+        <div class="text-xs font-mono text-cyan-400 font-bold" id="sequence-status">Ready</div>
+      </div>
+    </div>
+
+    <!-- MASTER EXPORT BAR -->
     <div class="border-t border-[#30363d] pt-4 space-y-2">
       <div class="text-[11px] text-slate-400 flex items-center justify-between">
-        <span>Capture preview audio directly to file:</span>
+        <span>Capture & Export Complete Voice Track:</span>
         <span id="export-status" class="text-emerald-400 font-medium"></span>
       </div>
       
       <div class="grid grid-cols-2 gap-3 pt-1">
-        <!-- Export WAV -->
-        <button id="btn-download-wav" class="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition">
-          <i class="fa-solid fa-file-arrow-down text-sm"></i> Capture & Download WAV
+        <button id="btn-export-wav" class="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition disabled:opacity-50" disabled>
+          <i class="fa-solid fa-file-arrow-down text-sm"></i> Export Sequence WAV (16-bit)
         </button>
 
-        <!-- Export MP3 -->
-        <button id="btn-download-mp3" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/40 transition">
-          <i class="fa-solid fa-file-audio text-sm"></i> Capture & Download MP3
+        <button id="btn-export-mp3" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/40 transition disabled:opacity-50" disabled>
+          <i class="fa-solid fa-file-audio text-sm"></i> Export Sequence MP3 (192k)
         </button>
       </div>
     </div>
@@ -118,15 +147,13 @@
   </div>
 
   <script>
-    let isPlayingPreview = false;
-    let isCapturing = false;
-    let availableVoices = [];
     let audioCtx = null;
+    let availableVoices = [];
+    let timelineClips = []; // Ordered sequence of audio clips
+    let isPlayingSequence = false;
+    let activeSequenceIndex = -1;
+    let currentPreviewUtterance = null;
     let cachedStream = null;
-
-    if (window.location.protocol === 'file:') {
-      document.getElementById('file-protocol-warning').classList.remove('hidden');
-    }
 
     function getAudioContext() {
       if (!audioCtx) {
@@ -141,7 +168,11 @@
     const ttsInput = document.getElementById('tts-input');
     const voiceSelect = document.getElementById('voice-preset');
     const toneSelect = document.getElementById('tone-preset');
-    const previewStatus = document.getElementById('preview-status');
+    const timelineContainer = document.getElementById('timeline-container');
+    const btnPlaySeq = document.getElementById('btn-play-sequence');
+    const btnExportWav = document.getElementById('btn-export-wav');
+    const btnExportMp3 = document.getElementById('btn-export-mp3');
+    const seqStatus = document.getElementById('sequence-status');
     const exportStatus = document.getElementById('export-status');
 
     ttsInput.oninput = () => {
@@ -149,101 +180,220 @@
     };
     ttsInput.oninput();
 
-    /* ==========================================================================
-       POPULATE INSTALLED OPERATING SYSTEM VOICES
-       ========================================================================== */
-    function populateVoiceList() {
-      if (!('speechSynthesis' in window)) {
-        voiceSelect.innerHTML = '<option value="0">Default System Voice</option>';
-        return;
-      }
-
+    // Populate OS System Voices
+    function loadVoices() {
+      if (!('speechSynthesis' in window)) return;
       availableVoices = window.speechSynthesis.getVoices();
       if (!availableVoices.length) return;
 
       voiceSelect.innerHTML = '';
-
-      const englishGroup = document.createElement('optgroup');
-      englishGroup.label = 'English Voices';
-      const otherGroup = document.createElement('optgroup');
-      otherGroup.label = 'Other Languages';
-
-      let preferredIndex = 0;
+      let defaultIdx = 0;
 
       availableVoices.forEach((voice, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' [Default]' : ''}`;
+        const opt = document.createElement('option');
+        opt.value = index;
+        opt.textContent = `${voice.name} (${voice.lang})`;
 
         if (/en[-_]AU/i.test(voice.lang) || /Russell|Amy|Catherine|James|Karen/i.test(voice.name)) {
-          preferredIndex = index;
+          defaultIdx = index;
         }
-
-        if (voice.lang.startsWith('en')) {
-          englishGroup.appendChild(option);
-        } else {
-          otherGroup.appendChild(option);
-        }
+        voiceSelect.appendChild(opt);
       });
 
-      if (englishGroup.children.length > 0) voiceSelect.appendChild(englishGroup);
-      if (otherGroup.children.length > 0) voiceSelect.appendChild(otherGroup);
-
-      voiceSelect.value = preferredIndex;
+      voiceSelect.value = defaultIdx;
     }
 
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.onvoiceschanged = populateVoiceList;
-      populateVoiceList();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      loadVoices();
     }
 
     /* ==========================================================================
-       LIVE PREVIEW (Pure Native Speech Synthesis)
+       SINGLE CLIP PREVIEW
        ========================================================================== */
     document.getElementById('btn-preview-tts').onclick = () => {
       const text = ttsInput.value.trim();
-      if (!text) {
-        alert('Please enter dialogue text first.');
-        return;
-      }
+      if (!text) return alert('Enter dialogue text to preview.');
 
-      if (isPlayingPreview) {
-        window.speechSynthesis.cancel();
-        stopPreviewUI();
-        return;
-      }
-
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      const selectedIndex = parseInt(voiceSelect.value, 10) || 0;
-      if (availableVoices[selectedIndex]) {
-        utterance.voice = availableVoices[selectedIndex];
-      }
-
+      stopAllPlayback();
       const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
+      const voiceIdx = parseInt(voiceSelect.value, 10) || 0;
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      if (availableVoices[voiceIdx]) utterance.voice = availableVoices[voiceIdx];
       utterance.rate = rate;
       utterance.pitch = pitch;
 
-      utterance.onstart = () => {
-        isPlayingPreview = true;
-        document.getElementById('preview-icon').className = 'fa-solid fa-pause text-sm';
-        previewStatus.innerText = 'Speaking preview...';
+      document.getElementById('preview-icon').className = 'fa-solid fa-pause text-xs';
+      utterance.onend = () => {
+        document.getElementById('preview-icon').className = 'fa-solid fa-play text-xs';
       };
-
-      utterance.onend = () => stopPreviewUI();
-      utterance.onerror = () => stopPreviewUI();
+      utterance.onerror = () => {
+        document.getElementById('preview-icon').className = 'fa-solid fa-play text-xs';
+      };
 
       window.speechSynthesis.speak(utterance);
     };
 
-    function stopPreviewUI() {
-      isPlayingPreview = false;
-      document.getElementById('preview-icon').className = 'fa-solid fa-play text-sm';
-      previewStatus.innerText = 'Ready to test voice';
+    /* ==========================================================================
+       TIMELINE MANAGER (ADD, DELETE, RENDER)
+       ========================================================================== */
+    document.getElementById('btn-add-clip').onclick = () => {
+      const text = ttsInput.value.trim();
+      if (!text) return alert('Enter text to add as a timeline clip.');
+
+      const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
+      const voiceIdx = parseInt(voiceSelect.value, 10) || 0;
+      const voiceName = availableVoices[voiceIdx] ? availableVoices[voiceIdx].name.split(' ')[0] : 'Voice';
+
+      timelineClips.push({
+        id: 'clip_' + Date.now() + Math.random().toString(36).substr(2, 4),
+        text: text,
+        voiceIndex: voiceIdx,
+        voiceName: voiceName,
+        rate: rate,
+        pitch: pitch
+      });
+
+      renderTimelineUI();
+    };
+
+    function renderTimelineUI() {
+      timelineContainer.innerHTML = '';
+
+      if (timelineClips.length === 0) {
+        timelineContainer.innerHTML = `
+          <div class="p-4 text-center text-xs text-slate-500 italic timeline-stripe border border-dashed border-[#30363d] rounded-lg">
+            No dialogue clips added yet. Add lines above to chain them in sequence.
+          </div>
+        `;
+        btnPlaySeq.disabled = true;
+        btnExportWav.disabled = true;
+        btnExportMp3.disabled = true;
+        document.getElementById('clip-count-label').innerText = '0 clips queued';
+        return;
+      }
+
+      btnPlaySeq.disabled = false;
+      btnExportWav.disabled = false;
+      btnExportMp3.disabled = false;
+      document.getElementById('clip-count-label').innerText = `${timelineClips.length} clips queued`;
+
+      timelineClips.forEach((clip, idx) => {
+        const item = document.createElement('div');
+        const isCurrentPlaying = (activeSequenceIndex === idx && isPlayingSequence);
+
+        item.className = `p-2 rounded-lg border text-xs flex items-center justify-between transition ${
+          isCurrentPlaying 
+            ? 'bg-cyan-950/60 border-cyan-400 text-white font-semibold' 
+            : 'bg-[#161b22] border-[#30363d] text-slate-300'
+        }`;
+
+        item.innerHTML = `
+          <div class="flex items-center gap-2 truncate flex-1">
+            <span class="w-4 h-4 rounded-full bg-[#21262d] text-cyan-400 font-mono text-[10px] flex items-center justify-center font-bold flex-shrink-0">
+              ${idx + 1}
+            </span>
+            <span class="truncate">${clip.text}</span>
+            <span class="text-[10px] bg-[#21262d] text-slate-400 px-1.5 py-0.5 rounded font-mono flex-shrink-0">
+              ${clip.voiceName} (${clip.rate}x)
+            </span>
+          </div>
+          <div class="flex items-center gap-1 ml-2">
+            <button class="p-1 hover:text-cyan-400" title="Play Line" onclick="playSingleClip(${idx})">
+              <i class="fa-solid fa-play text-[10px]"></i>
+            </button>
+            <button class="p-1 hover:text-rose-400" title="Remove Line" onclick="removeClip(${idx})">
+              <i class="fa-solid fa-xmark text-[11px]"></i>
+            </button>
+          </div>
+        `;
+        timelineContainer.appendChild(item);
+      });
+    }
+
+    window.removeClip = function(idx) {
+      timelineClips.splice(idx, 1);
+      renderTimelineUI();
+    };
+
+    window.playSingleClip = function(idx) {
+      stopAllPlayback();
+      const clip = timelineClips[idx];
+      const utterance = new SpeechSynthesisUtterance(clip.text);
+      if (availableVoices[clip.voiceIndex]) utterance.voice = availableVoices[clip.voiceIndex];
+      utterance.rate = clip.rate;
+      utterance.pitch = clip.pitch;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    document.getElementById('btn-clear-timeline').onclick = () => {
+      if (!timelineClips.length) return;
+      if (confirm('Clear all queued clips from this voice track?')) {
+        stopAllPlayback();
+        timelineClips = [];
+        renderTimelineUI();
+      }
+    };
+
+    /* ==========================================================================
+       FULL SEQUENCE PLAYBACK ENGINE
+       ========================================================================== */
+    function stopAllPlayback() {
+      window.speechSynthesis.cancel();
+      isPlayingSequence = false;
+      activeSequenceIndex = -1;
+      document.getElementById('seq-play-icon').className = 'fa-solid fa-play text-xs';
+      seqStatus.innerText = 'Ready';
+      renderTimelineUI();
+    }
+
+    document.getElementById('btn-stop-sequence').onclick = stopAllPlayback;
+
+    btnPlaySeq.onclick = () => {
+      if (isPlayingSequence) {
+        stopAllPlayback();
+        return;
+      }
+      playSequenceFromIndex(0);
+    };
+
+    function playSequenceFromIndex(index) {
+      if (index >= timelineClips.length) {
+        stopAllPlayback();
+        seqStatus.innerText = 'Sequence Finished';
+        return;
+      }
+
+      isPlayingSequence = true;
+      activeSequenceIndex = index;
+      renderTimelineUI();
+
+      seqStatus.innerText = `Playing Clip ${index + 1} of ${timelineClips.length}`;
+      document.getElementById('seq-play-icon').className = 'fa-solid fa-pause text-xs';
+
+      const clip = timelineClips[index];
+      const utterance = new SpeechSynthesisUtterance(clip.text);
+      if (availableVoices[clip.voiceIndex]) utterance.voice = availableVoices[clip.voiceIndex];
+      utterance.rate = clip.rate;
+      utterance.pitch = clip.pitch;
+
+      utterance.onend = () => {
+        // Natural 250ms phrase breath gap between lines
+        setTimeout(() => {
+          if (isPlayingSequence) playSequenceFromIndex(index + 1);
+        }, 250);
+      };
+
+      utterance.onerror = () => {
+        stopAllPlayback();
+      };
+
+      window.speechSynthesis.speak(utterance);
     }
 
     /* ==========================================================================
-       DIGITAL TAB LOOPBACK CAPTURE (With Auto-Tab Preferences)
+       SEQUENCE CAPTURE & RECORDING ENGINE (EXPORT WAV/MP3)
        ========================================================================== */
     async function getTabAudioStream() {
       if (cachedStream && cachedStream.active && cachedStream.getAudioTracks().length > 0) {
@@ -251,9 +401,7 @@
       }
 
       try {
-        exportStatus.innerText = 'Select tab & ensure "Share audio" is checked...';
-        
-        // Modern constraints targeting the current tab directly
+        exportStatus.innerText = 'Select "This Tab" and check "Share audio"...';
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
           audio: {
@@ -274,32 +422,24 @@
           return null;
         }
 
-        // Discard video track immediately
         stream.getVideoTracks().forEach(t => t.stop());
         cachedStream = stream;
         return stream;
       } catch (err) {
-        console.warn('Capture canceled or unavailable:', err);
+        console.warn('Capture canceled:', err);
         exportStatus.innerText = 'Capture canceled';
         return null;
       }
     }
 
-    async function capturePreviewAudioBuffer() {
-      const text = ttsInput.value.trim();
-      if (!text) {
-        alert('Please enter dialogue text first.');
-        return null;
-      }
-
-      if (isCapturing) return null;
+    async function recordMasterSequenceToBuffer() {
+      if (!timelineClips.length) return null;
 
       const stream = await getTabAudioStream();
       if (!stream) return null;
 
-      isCapturing = true;
-      exportStatus.innerText = 'Recording speech track...';
-      window.speechSynthesis.cancel();
+      stopAllPlayback();
+      exportStatus.innerText = 'Recording timeline sequence...';
 
       return new Promise((resolve) => {
         const mediaRecorder = new MediaRecorder(stream);
@@ -310,48 +450,50 @@
         };
 
         mediaRecorder.onstop = async () => {
-          exportStatus.innerText = 'Processing audio...';
+          exportStatus.innerText = 'Processing sequence audio...';
           const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
           const arrayBuf = await blob.arrayBuffer();
           const ctx = getAudioContext();
           const decoded = await ctx.decodeAudioData(arrayBuf);
-          isCapturing = false;
           resolve(decoded);
         };
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        const selectedIndex = parseInt(voiceSelect.value, 10) || 0;
-        if (availableVoices[selectedIndex]) {
-          utterance.voice = availableVoices[selectedIndex];
+        // Start recorder, then chain playback
+        mediaRecorder.start(100);
+
+        function playStep(idx) {
+          if (idx >= timelineClips.length) {
+            setTimeout(() => {
+              if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+              stopAllPlayback();
+            }, 350);
+            return;
+          }
+
+          const clip = timelineClips[idx];
+          const utterance = new SpeechSynthesisUtterance(clip.text);
+          if (availableVoices[clip.voiceIndex]) utterance.voice = availableVoices[clip.voiceIndex];
+          utterance.rate = clip.rate;
+          utterance.pitch = clip.pitch;
+
+          utterance.onend = () => {
+            setTimeout(() => playStep(idx + 1), 250);
+          };
+
+          utterance.onerror = () => {
+            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            stopAllPlayback();
+          };
+
+          window.speechSynthesis.speak(utterance);
         }
 
-        const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
-        utterance.rate = rate;
-        utterance.pitch = pitch;
-
-        utterance.onstart = () => {
-          mediaRecorder.start(100);
-          previewStatus.innerText = 'Capturing digital preview...';
-        };
-
-        utterance.onend = () => {
-          setTimeout(() => {
-            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-            stopPreviewUI();
-          }, 300);
-        };
-
-        utterance.onerror = () => {
-          if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-          stopPreviewUI();
-        };
-
-        window.speechSynthesis.speak(utterance);
+        playStep(0);
       });
     }
 
     /* ==========================================================================
-       WAV (16-BIT PCM) & MP3 ENCODERS
+       FILE EXPORTERS (WAV 16-BIT & MP3)
        ========================================================================== */
     function audioBufferToWavBlob(buffer) {
       const numOfChan = buffer.numberOfChannels;
@@ -439,23 +581,23 @@
       }, 2000);
     }
 
-    document.getElementById('btn-download-wav').onclick = async () => {
-      const buffer = await capturePreviewAudioBuffer();
+    btnExportWav.onclick = async () => {
+      const buffer = await recordMasterSequenceToBuffer();
       if (!buffer) return;
 
       const blob = audioBufferToWavBlob(buffer);
-      triggerDownload(blob, `speech_studio_${Date.now()}.wav`);
-      exportStatus.innerText = 'Downloaded WAV!';
+      triggerDownload(blob, `voice_sequence_${Date.now()}.wav`);
+      exportStatus.innerText = 'Downloaded Master WAV!';
       setTimeout(() => { exportStatus.innerText = ''; }, 3000);
     };
 
-    document.getElementById('btn-download-mp3').onclick = async () => {
-      const buffer = await capturePreviewAudioBuffer();
+    btnExportMp3.onclick = async () => {
+      const buffer = await recordMasterSequenceToBuffer();
       if (!buffer) return;
 
       const blob = audioBufferToMp3Blob(buffer);
-      triggerDownload(blob, `speech_studio_${Date.now()}.mp3`);
-      exportStatus.innerText = 'Downloaded MP3!';
+      triggerDownload(blob, `voice_sequence_${Date.now()}.mp3`);
+      exportStatus.innerText = 'Downloaded Master MP3!';
       setTimeout(() => { exportStatus.innerText = ''; }, 3000);
     };
 
@@ -484,14 +626,12 @@
             sttStatusText.innerText = 'Listening to microphone... speak naturally.';
             btnStt.className = 'px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold border border-rose-500 flex items-center gap-1.5 transition animate-pulse';
             sttMicIcon.className = 'fa-solid fa-microphone-lines text-white';
-          } catch (e) {
-            console.warn('Recognition start exception:', e);
-          }
+          } catch (e) { console.warn(e); }
         } else {
           recognition.stop();
           isDictating = false;
           sttLabel.innerText = 'Dictate Text';
-          sttStatusText.innerText = 'Dictate into your mic to append speech dialogue below.';
+          sttStatusText.innerText = 'Dictate with your mic to convert spoken words into text below.';
           btnStt.className = 'px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 rounded-lg text-xs font-bold border border-[#30363d] flex items-center gap-1.5 transition';
           sttMicIcon.className = 'fa-solid fa-microphone';
         }
@@ -500,9 +640,7 @@
       recognition.onresult = (evt) => {
         let finalChunk = '';
         for (let i = evt.resultIndex; i < evt.results.length; ++i) {
-          if (evt.results[i].isFinal) {
-            finalChunk += evt.results[i][0].transcript + ' ';
-          }
+          if (evt.results[i].isFinal) finalChunk += evt.results[i][0].transcript + ' ';
         }
         if (finalChunk) {
           const current = ttsInput.value.trim();
@@ -511,14 +649,9 @@
         }
       };
 
-      recognition.onerror = (evt) => {
-        console.warn('Recognition error:', evt.error);
-        if (evt.error === 'not-allowed') {
-          alert('Microphone access denied. Please click the permissions icon in your address bar.');
-        }
+      recognition.onerror = () => {
         isDictating = false;
         sttLabel.innerText = 'Dictate Text';
-        sttStatusText.innerText = 'Microphone idle or paused.';
         btnStt.className = 'px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 rounded-lg text-xs font-bold border border-[#30363d] flex items-center gap-1.5 transition';
         sttMicIcon.className = 'fa-solid fa-microphone';
       };
@@ -530,9 +663,8 @@
       };
     } else {
       btnStt.disabled = true;
-      btnStt.title = 'Speech Recognition requires Chrome, Edge, or a WebKit browser';
       btnStt.classList.add('opacity-50', 'cursor-not-allowed');
-      sttStatusText.innerText = 'Dictation not supported in this browser (use Chrome or Edge).';
+      sttStatusText.innerText = 'Dictation not supported in this browser.';
     }
   </script>
 </body>
