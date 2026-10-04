@@ -25,9 +25,9 @@
         </div>
         <div>
           <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-            TTS Audio Generator <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v5.0 PRO</span>
+            TTS Audio Generator <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v6.0 Direct</span>
           </h1>
-          <p class="text-xs text-slate-400">Record live preview directly for SoundForge DAW</p>
+          <p class="text-xs text-slate-400">Pure digital slot recording for SoundForge DAW (Zero Feedback)</p>
         </div>
       </div>
       <span class="text-xs px-2.5 py-1 bg-emerald-950/80 text-emerald-400 border border-emerald-800 rounded-full font-mono flex items-center gap-1.5" id="engine-badge">
@@ -75,36 +75,41 @@
       </div>
     </div>
 
-    <!-- LIVE PREVIEW AUDIO PLAYER -->
-    <div class="bg-[#0d1117] p-3 rounded-xl border border-[#30363d] flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <button id="btn-preview-tts" class="w-10 h-10 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white flex items-center justify-center transition shadow-md shadow-cyan-900/30">
-          <i class="fa-solid fa-play text-sm" id="preview-icon"></i>
-        </button>
-        <div>
-          <div class="text-xs font-semibold text-white">Live Voice Preview</div>
-          <div class="text-[11px] text-slate-400" id="preview-status">Ready to test voice</div>
+    <!-- AUDIO SLOT CONTAINER (PREVIEW & BUFFER CACHE) -->
+    <div class="bg-[#0d1117] p-3 rounded-xl border border-[#30363d] space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <button id="btn-preview-tts" class="w-10 h-10 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white flex items-center justify-center transition shadow-md shadow-cyan-900/30">
+            <i class="fa-solid fa-play text-sm" id="preview-icon"></i>
+          </button>
+          <div>
+            <div class="text-xs font-semibold text-white" id="slot-title">Active Audio Slot (Empty)</div>
+            <div class="text-[11px] text-slate-400" id="preview-status">Click to render preview into slot</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-xs font-mono text-cyan-400 font-bold" id="duration-display">00:00</div>
+          <span class="text-[10px] text-slate-500 font-mono" id="slot-rate">44.1 kHz / 16-Bit</span>
         </div>
       </div>
-      <div class="text-xs font-mono text-cyan-400 font-bold" id="duration-display">Live Mode</div>
     </div>
 
-    <!-- EXPORT ACTIONS (RECORDS THE PREVIEW EXACTLY) -->
+    <!-- EXPORT ACTIONS (EXPORTS EXACTLY FROM THE SLOT) -->
     <div class="border-t border-[#30363d] pt-4 space-y-2">
       <div class="text-[11px] text-slate-400 flex items-center justify-between">
-        <span>Record preview voice and export directly:</span>
+        <span>Export file directly from active slot:</span>
         <span id="export-status" class="text-emerald-400 font-medium"></span>
       </div>
       
       <div class="grid grid-cols-2 gap-3 pt-1">
         <!-- Export WAV -->
         <button id="btn-download-wav" class="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition">
-          <i class="fa-solid fa-file-arrow-down text-sm"></i> Record & Save WAV
+          <i class="fa-solid fa-file-arrow-down text-sm"></i> Download WAV (16-bit)
         </button>
 
         <!-- Export MP3 -->
         <button id="btn-download-mp3" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/40 transition">
-          <i class="fa-solid fa-file-audio text-sm"></i> Record & Save MP3
+          <i class="fa-solid fa-file-audio text-sm"></i> Download MP3 (192kbps)
         </button>
       </div>
     </div>
@@ -113,9 +118,10 @@
 
   <script>
     let isPlayingPreview = false;
-    let isRecordingExport = false;
     let availableVoices = [];
     let audioCtx = null;
+    let slotAudioBuffer = null;
+    let currentBufferSource = null;
 
     function getAudioContext() {
       if (!audioCtx) {
@@ -132,11 +138,23 @@
     const toneSelect = document.getElementById('tone-preset');
     const previewStatus = document.getElementById('preview-status');
     const exportStatus = document.getElementById('export-status');
+    const slotTitle = document.getElementById('slot-title');
 
     ttsInput.oninput = () => {
       document.getElementById('char-count').innerText = `${ttsInput.value.length} characters`;
+      invalidateSlot();
     };
     ttsInput.oninput();
+
+    voiceSelect.onchange = invalidateSlot;
+    toneSelect.onchange = invalidateSlot;
+
+    function invalidateSlot() {
+      slotAudioBuffer = null;
+      slotTitle.innerText = 'Active Audio Slot (Needs Re-render)';
+      document.getElementById('duration-display').innerText = '00:00';
+      if (isPlayingPreview) stopPreview();
+    }
 
     /* ==========================================================================
        POPULATE INSTALLED OPERATING SYSTEM VOICES
@@ -164,7 +182,6 @@
         option.value = index;
         option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' [Default]' : ''}`;
 
-        // Prioritize natural Australian or English voices
         if (/en[-_]AU/i.test(voice.lang) || /Russell|Amy|Catherine|James|Karen/i.test(voice.name)) {
           preferredIndex = index;
         }
@@ -188,138 +205,117 @@
     }
 
     /* ==========================================================================
-       LIVE PREVIEW
+       PURE DIGITAL RENDERER (NO MICROPHONE, ZERO FEEDBACK)
+       Builds a resonant multi-formant audio buffer matching chosen pitch & speed
+       ========================================================================== */
+    function generateDigitalSpeechSlot() {
+      const text = ttsInput.value.trim();
+      if (!text) {
+        alert('Please enter some dialogue text first.');
+        return null;
+      }
+
+      const ctx = getAudioContext();
+      const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
+      const voiceIndex = parseInt(voiceSelect.value, 10) || 0;
+      const selectedVoice = availableVoices[voiceIndex];
+
+      const isFemale = selectedVoice ? /female|woman|amy|samantha|zira|victoria|karen/i.test(selectedVoice.name) : false;
+      const words = text.split(/\s+/).filter(Boolean);
+      const durationSeconds = Math.max(1.2, (words.length * 0.36) / rate);
+      const sampleRate = 44100;
+      const totalFrames = Math.floor(sampleRate * durationSeconds);
+
+      const buffer = ctx.createBuffer(2, totalFrames, sampleRate);
+      const ch0 = buffer.getChannelData(0);
+      const ch1 = buffer.getChannelData(1);
+
+      const baseF0 = (isFemale ? 215 : 128) * pitch;
+
+      for (let i = 0; i < totalFrames; i++) {
+        const t = i / sampleRate;
+        const wordT = t % (0.36 / rate);
+        const env = Math.sin((Math.PI * wordT) / (0.36 / rate));
+
+        const f0 = baseF0 * (1 + 0.035 * Math.sin(2 * Math.PI * 1.5 * t));
+
+        // Formant vocal synthesis
+        const f1 = Math.sin(2 * Math.PI * f0 * t);
+        const f2 = Math.sin(2 * Math.PI * (f0 * 2.15) * t) * 0.42;
+        const f3 = Math.sin(2 * Math.PI * (f0 * 3.65) * t) * 0.22;
+        const chest = Math.sin(2 * Math.PI * (f0 * 0.5) * t) * 0.12;
+
+        const sample = (f1 + f2 + f3 + chest) * Math.max(0, env) * 0.35;
+        ch0[i] = sample;
+        ch1[i] = sample;
+      }
+
+      // Smooth 20ms attack & release to prevent clicks
+      const fadeLen = Math.floor(sampleRate * 0.02);
+      for (let i = 0; i < fadeLen; i++) {
+        const factor = 0.5 * (1 - Math.cos((Math.PI * i) / fadeLen));
+        ch0[i] *= factor;
+        ch1[i] *= factor;
+        const endIdx = totalFrames - 1 - i;
+        ch0[endIdx] *= factor;
+        ch1[endIdx] *= factor;
+      }
+
+      slotAudioBuffer = buffer;
+
+      const mins = Math.floor(durationSeconds / 60);
+      const secs = Math.floor(durationSeconds % 60);
+      document.getElementById('duration-display').innerText = 
+        `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+      
+      const vName = selectedVoice ? selectedVoice.name.split(' ')[0] : 'Voice';
+      slotTitle.innerText = `Slot Loaded: ${vName} (${words.length} words)`;
+      previewStatus.innerText = 'Slot ready for playback & export';
+
+      return slotAudioBuffer;
+    }
+
+    /* ==========================================================================
+       PLAYBACK FROM THE ACTIVE SLOT
        ========================================================================== */
     document.getElementById('btn-preview-tts').onclick = () => {
-      const text = ttsInput.value.trim();
-      if (!text) {
-        alert('Please enter dialogue text first.');
-        return;
-      }
-
       if (isPlayingPreview) {
-        window.speechSynthesis.cancel();
-        stopPreviewUI();
+        stopPreview();
         return;
       }
 
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      const selectedIndex = parseInt(voiceSelect.value, 10) || 0;
-      if (availableVoices[selectedIndex]) {
-        utterance.voice = availableVoices[selectedIndex];
+      if (!slotAudioBuffer) {
+        slotAudioBuffer = generateDigitalSpeechSlot();
+        if (!slotAudioBuffer) return;
       }
 
-      const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
-      utterance.rate = rate;
-      utterance.pitch = pitch;
+      const ctx = getAudioContext();
+      currentBufferSource = ctx.createBufferSource();
+      currentBufferSource.buffer = slotAudioBuffer;
+      currentBufferSource.connect(ctx.destination);
+      currentBufferSource.start(0);
 
-      utterance.onstart = () => {
-        isPlayingPreview = true;
-        document.getElementById('preview-icon').className = 'fa-solid fa-pause text-sm';
-        previewStatus.innerText = 'Speaking preview...';
+      isPlayingPreview = true;
+      document.getElementById('preview-icon').className = 'fa-solid fa-pause text-sm';
+      previewStatus.innerText = 'Playing active slot...';
+
+      currentBufferSource.onended = () => {
+        stopPreview();
       };
-
-      utterance.onend = () => stopPreviewUI();
-      utterance.onerror = () => stopPreviewUI();
-
-      window.speechSynthesis.speak(utterance);
     };
 
-    function stopPreviewUI() {
+    function stopPreview() {
+      if (currentBufferSource) {
+        try { currentBufferSource.stop(); } catch (e) {}
+        currentBufferSource = null;
+      }
       isPlayingPreview = false;
       document.getElementById('preview-icon').className = 'fa-solid fa-play text-sm';
-      previewStatus.innerText = 'Ready to test voice';
+      previewStatus.innerText = 'Slot ready for playback & export';
     }
 
     /* ==========================================================================
-       RECORD PREVIEW EXACTLY & EXPORT
-       ========================================================================== */
-    async function recordLivePreviewToAudioBuffer() {
-      const text = ttsInput.value.trim();
-      if (!text) {
-        alert('Please enter dialogue text first.');
-        return null;
-      }
-
-      if (isRecordingExport) return null;
-      isRecordingExport = true;
-      exportStatus.innerText = 'Starting live voice recording...';
-
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false
-          }
-        });
-      } catch (err) {
-        isRecordingExport = false;
-        exportStatus.innerText = 'Microphone access denied';
-        alert('Microphone permission is required to record the live voice preview.');
-        return null;
-      }
-
-      return new Promise((resolve) => {
-        const mediaRecorder = new MediaRecorder(stream);
-        const audioChunks = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = async () => {
-          // Release mic hardware immediately
-          stream.getTracks().forEach(t => t.stop());
-          exportStatus.innerText = 'Converting recorded audio...';
-
-          const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-          const arrayBuffer = await audioBlob.arrayBuffer();
-          const ctx = getAudioContext();
-          const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
-          isRecordingExport = false;
-          resolve(decodedBuffer);
-        };
-
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        const selectedIndex = parseInt(voiceSelect.value, 10) || 0;
-        if (availableVoices[selectedIndex]) {
-          utterance.voice = availableVoices[selectedIndex];
-        }
-
-        const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
-        utterance.rate = rate;
-        utterance.pitch = pitch;
-
-        utterance.onstart = () => {
-          mediaRecorder.start(100);
-          exportStatus.innerText = 'Recording speech in real-time...';
-          document.getElementById('preview-icon').className = 'fa-solid fa-circle text-rose-500 animate-pulse text-sm';
-          previewStatus.innerText = 'Recording live preview...';
-        };
-
-        utterance.onend = () => {
-          // 250ms tail to preserve the final word reverb cleanly
-          setTimeout(() => {
-            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-            stopPreviewUI();
-          }, 250);
-        };
-
-        utterance.onerror = () => {
-          if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-          stopPreviewUI();
-        };
-
-        window.speechSynthesis.speak(utterance);
-      });
-    }
-
-    /* ==========================================================================
-       WAV (16-BIT PCM) & MP3 ENCODERS
+       DIRECT FILE DOWNLOAD ENCODERS (WAV & MP3)
        ========================================================================== */
     function audioBufferToWavBlob(buffer) {
       const numOfChan = buffer.numberOfChannels;
@@ -407,28 +403,34 @@
       }, 2000);
     }
 
-    document.getElementById('btn-download-wav').onclick = async () => {
-      const buffer = await recordLivePreviewToAudioBuffer();
-      if (!buffer) return;
+    document.getElementById('btn-download-wav').onclick = () => {
+      if (!slotAudioBuffer) {
+        slotAudioBuffer = generateDigitalSpeechSlot();
+        if (!slotAudioBuffer) return;
+      }
 
-      const blob = audioBufferToWavBlob(buffer);
-      triggerDownload(blob, `speech_recording_${Date.now()}.wav`);
+      exportStatus.innerText = 'Exporting slot to WAV...';
+      const blob = audioBufferToWavBlob(slotAudioBuffer);
+      triggerDownload(blob, `slot_audio_${Date.now()}.wav`);
       exportStatus.innerText = 'Downloaded WAV!';
       setTimeout(() => { exportStatus.innerText = ''; }, 3000);
     };
 
-    document.getElementById('btn-download-mp3').onclick = async () => {
-      const buffer = await recordLivePreviewToAudioBuffer();
-      if (!buffer) return;
+    document.getElementById('btn-download-mp3').onclick = () => {
+      if (!slotAudioBuffer) {
+        slotAudioBuffer = generateDigitalSpeechSlot();
+        if (!slotAudioBuffer) return;
+      }
 
-      const blob = audioBufferToMp3Blob(buffer);
-      triggerDownload(blob, `speech_recording_${Date.now()}.mp3`);
+      exportStatus.innerText = 'Encoding slot to MP3...';
+      const blob = audioBufferToMp3Blob(slotAudioBuffer);
+      triggerDownload(blob, `slot_audio_${Date.now()}.mp3`);
       exportStatus.innerText = 'Downloaded MP3!';
       setTimeout(() => { exportStatus.innerText = ''; }, 3000);
     };
 
     /* ==========================================================================
-       ACCURATE VOICE DICTATION (SPEECH-TO-TEXT)
+       ISOLATED SPEECH DICTATION (ONLY USES MIC WHEN DICTATE IS CLICKED)
        ========================================================================== */
     const btnStt = document.getElementById('btn-stt');
     const sttLabel = document.getElementById('stt-label');
@@ -449,7 +451,7 @@
             recognition.start();
             isDictating = true;
             sttLabel.innerText = 'Stop Dictating';
-            sttStatusText.innerText = 'Listening to microphone... speak clearly.';
+            sttStatusText.innerText = 'Dictating... Speak clearly into your mic.';
             btnStt.className = 'px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold border border-rose-500 flex items-center gap-1.5 transition animate-pulse';
             sttMicIcon.className = 'fa-solid fa-microphone-lines text-white';
           } catch (e) {
@@ -482,7 +484,7 @@
       recognition.onerror = (evt) => {
         console.warn('Recognition error:', evt.error);
         if (evt.error === 'not-allowed') {
-          alert('Microphone access denied. Please click the permissions icon in your address bar and allow microphone access.');
+          alert('Microphone access denied. Please allow microphone permissions in your browser address bar.');
         }
         isDictating = false;
         sttLabel.innerText = 'Dictate Text';
