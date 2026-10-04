@@ -29,9 +29,9 @@
         </div>
         <div>
           <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-            SoundForge Master Player <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v6.0 RACK</span>
+            SoundForge Master Player <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v7.0 INDEXED-DB</span>
           </h1>
-          <p class="text-xs text-slate-400">Multi-scene memory engine & universal .sfproj bundle player</p>
+          <p class="text-xs text-slate-400">High-capacity memory rack & universal .sfproj bundle player</p>
         </div>
       </div>
 
@@ -48,7 +48,7 @@
         <div class="flex items-center gap-2">
           <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
           <span class="text-xs font-bold text-slate-200 uppercase tracking-wider">
-            Memory Rack (8 Persistent Scene Slots)
+            Memory Rack (8 IndexedDB Scene Slots)
           </span>
         </div>
         <div class="flex items-center gap-2">
@@ -98,7 +98,7 @@
       </div>
 
       <div class="h-44 bg-[#0d1117] border border-[#30363d] rounded-xl relative overflow-x-auto overflow-y-hidden timeline-grid p-1" id="timeline-scroll-lane">
-        <!-- Interactive Playhead Line -->
+        <!-- Playhead -->
         <div id="playhead" class="absolute top-0 bottom-0 w-[2px] bg-rose-500 z-30 pointer-events-none transition-all duration-75" style="left: 0px;">
           <div class="w-3 h-3 bg-rose-500 rounded-full -ml-[5px] -mt-1 shadow-sm shadow-rose-500"></div>
         </div>
@@ -157,7 +157,7 @@
   </div>
 
   <!-- MODAL: SAVE TO SPECIFIC SLOT PICKER -->
-  <div id="save-slot-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+  <div id="save-slot-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-[#161b22] border border-[#30363d] rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-[#30363d] pb-3">
         <div class="text-sm font-bold text-white flex items-center gap-2">
@@ -205,6 +205,89 @@
     if ('speechSynthesis' in window) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
       loadVoices();
+    }
+
+    /* ==========================================================================
+       INDEXED-DB HIGH-CAPACITY STORAGE ENGINE (BYPASSES 5MB LOCALSTORAGE LIMIT)
+       ========================================================================== */
+    let idb = null;
+    function openPlayerDB() {
+      return new Promise((resolve, reject) => {
+        if (idb) return resolve(idb);
+        const req = indexedDB.open('SoundForgePlayerDB', 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('slots')) {
+            db.createObjectStore('slots', { keyPath: 'slotId' });
+          }
+        };
+        req.onsuccess = (e) => {
+          idb = e.target.result;
+          resolve(idb);
+        };
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    async function dbSaveSlot(slotNum, bundle) {
+      const db = await openPlayerDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('slots', 'readwrite');
+        const store = tx.objectStore('slots');
+        // Deep copy of bundle object
+        const record = {
+          slotId: slotNum,
+          bundle: JSON.parse(JSON.stringify(bundle)),
+          savedAt: new Date().toISOString()
+        };
+        const req = store.put(record);
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    async function dbGetSlot(slotNum) {
+      const db = await openPlayerDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('slots', 'readonly');
+        const store = tx.objectStore('slots');
+        const req = store.get(slotNum);
+        req.onsuccess = () => resolve(req.result ? req.result.bundle : null);
+        req.onerror = () => resolve(null);
+      });
+    }
+
+    async function dbClearSlot(slotNum) {
+      const db = await openPlayerDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('slots', 'readwrite');
+        const store = tx.objectStore('slots');
+        const req = store.delete(slotNum);
+        req.onsuccess = () => resolve();
+        req.onerror = () => resolve();
+      });
+    }
+
+    async function dbGetAllSlotsMeta() {
+      const db = await openPlayerDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('slots', 'readonly');
+        const store = tx.objectStore('slots');
+        const req = store.getAll();
+        req.onsuccess = () => {
+          const map = new Map();
+          if (req.result) {
+            req.result.forEach(item => {
+              map.set(item.slotId, {
+                taskName: item.bundle.taskName || `Scene ${item.slotId}`,
+                totalDuration: item.bundle.totalDuration || 0
+              });
+            });
+          }
+          resolve(map);
+        };
+        req.onerror = () => resolve(new Map());
+      });
     }
 
     const fileInput = document.getElementById('file-input');
@@ -306,12 +389,12 @@
       renderTimelineLanes();
       renderCueSheet();
       seekTo(0);
-      renderMemorySlots();
+      await renderMemorySlots();
       engineStatus.innerText = 'Approved & Ready';
     }
 
-    /* CLEAR TIMELINE COMPLETELY */
-    btnClearTimeline.onclick = () => {
+    /* CLEAR TIMELINE */
+    btnClearTimeline.onclick = async () => {
       if (!currentBundle) return;
       if (confirm('Clear the current timeline? (Saved memory slots will remain intact)')) {
         stopPlayback();
@@ -337,11 +420,10 @@
         `;
         cuesList.innerHTML = '<div class="text-[11px] text-slate-600 italic">No cues loaded.</div>';
         updatePlayheadUI(0);
-        renderMemorySlots();
+        await renderMemorySlots();
       }
     };
 
-    /* RENDER 4 LANES */
     function renderTimelineLanes() {
       lanesWrapper.innerHTML = '';
       if (!currentBundle || !currentBundle.tracks) return;
@@ -521,27 +603,18 @@
     }
 
     /* ==========================================================================
-       8 PERSISTENT MEMORY SLOTS (SAVE & LOAD)
+       8 PERSISTENT MEMORY SLOTS (INDEXED-DB POWERED)
        ========================================================================== */
-    function renderMemorySlots() {
+    async function renderMemorySlots() {
       const container = document.getElementById('slots-grid');
       container.innerHTML = '';
+      const metaMap = await dbGetAllSlotsMeta();
 
       for (let i = 1; i <= TOTAL_SLOTS; i++) {
-        const slotKey = `sf_player_slot_${i}`;
-        const slotDataRaw = localStorage.getItem(slotKey);
-        const hasData = !!slotDataRaw;
-        let slotTitle = 'Empty';
-        let slotSub = 'No scene stored';
-
-        if (hasData) {
-          try {
-            const parsed = JSON.parse(slotDataRaw);
-            slotTitle = parsed.taskName || `Scene ${i}`;
-            const dur = parsed.totalDuration ? `${parsed.totalDuration.toFixed(1)}s` : 'Scene';
-            slotSub = `${dur} • Ready`;
-          } catch(e) {}
-        }
+        const slotMeta = metaMap.get(i);
+        const hasData = !!slotMeta;
+        const slotTitle = hasData ? slotMeta.taskName : 'Empty';
+        const slotSub = hasData ? `${slotMeta.totalDuration.toFixed(1)}s • Ready` : 'No scene stored';
 
         const isCurrentActive = (activeSlotLoaded === i);
         const slotCard = document.createElement('div');
@@ -584,7 +657,7 @@
     }
 
     // Direct Save Function
-    window.saveToSlotDirect = function(slotNumber, event) {
+    window.saveToSlotDirect = async function(slotNumber, event) {
       if (event) event.stopPropagation();
       if (!currentBundle) {
         alert('Please load or import an approved scene before saving to a slot.');
@@ -594,22 +667,28 @@
       const targetSlot = parseInt(slotNumber, 10);
       if (isNaN(targetSlot) || targetSlot < 1 || targetSlot > TOTAL_SLOTS) return;
 
-      localStorage.setItem(`sf_player_slot_${targetSlot}`, JSON.stringify(currentBundle));
-      activeSlotLoaded = targetSlot;
-      activeSlotIndicator.innerText = `Active: Slot ${targetSlot}`;
-      renderMemorySlots();
-      engineStatus.innerText = `Saved into Slot ${targetSlot}!`;
-      setTimeout(() => {
-        if (currentBundle && engineStatus.innerText.includes('Saved')) {
-          engineStatus.innerText = 'Approved & Ready';
-        }
-      }, 2500);
+      try {
+        engineStatus.innerText = `Saving into Slot ${targetSlot}...`;
+        await dbSaveSlot(targetSlot, currentBundle);
+        activeSlotLoaded = targetSlot;
+        activeSlotIndicator.innerText = `Active: Slot ${targetSlot}`;
+        await renderMemorySlots();
+        engineStatus.innerText = `Saved into Slot ${targetSlot}!`;
+        setTimeout(() => {
+          if (currentBundle && engineStatus.innerText.includes('Saved')) {
+            engineStatus.innerText = 'Approved & Ready';
+          }
+        }, 2500);
+      } catch (err) {
+        console.error(err);
+        alert('Failed to save to slot: ' + err.message);
+      }
     };
 
     // Modal Slot Selector
-    btnOpenSaveModal.onclick = () => {
+    btnOpenSaveModal.onclick = async () => {
       if (!currentBundle) return;
-      renderModalSlots();
+      await renderModalSlots();
       saveSlotModal.classList.remove('hidden');
     };
 
@@ -617,21 +696,14 @@
       saveSlotModal.classList.add('hidden');
     };
 
-    function renderModalSlots() {
+    async function renderModalSlots() {
       modalSlotsList.innerHTML = '';
+      const metaMap = await dbGetAllSlotsMeta();
 
       for (let i = 1; i <= TOTAL_SLOTS; i++) {
-        const slotKey = `sf_player_slot_${i}`;
-        const slotDataRaw = localStorage.getItem(slotKey);
-        const hasData = !!slotDataRaw;
-        let slotTitle = 'Empty Slot';
-
-        if (hasData) {
-          try {
-            const p = JSON.parse(slotDataRaw);
-            slotTitle = p.taskName || `Scene ${i}`;
-          } catch(e) {}
-        }
+        const slotMeta = metaMap.get(i);
+        const hasData = !!slotMeta;
+        const slotTitle = hasData ? slotMeta.taskName : 'Empty Slot';
         
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -649,10 +721,10 @@
           <div class="text-xs font-semibold mt-1 text-white truncate w-full">${hasData ? slotTitle : 'Save into this slot'}</div>
         `;
 
-        btn.onclick = (e) => {
+        btn.onclick = async (e) => {
           e.preventDefault();
-          saveToSlotDirect(i);
           saveSlotModal.classList.add('hidden');
+          await saveToSlotDirect(i);
         };
 
         modalSlotsList.appendChild(btn);
@@ -660,37 +732,37 @@
     }
 
     // Load from Specified Slot
-    window.loadFromSlot = function(slotNumber) {
+    window.loadFromSlot = async function(slotNumber) {
       const targetSlot = parseInt(slotNumber, 10);
-      const dataRaw = localStorage.getItem(`sf_player_slot_${targetSlot}`);
-      if (!dataRaw) return;
       try {
-        const bundle = JSON.parse(dataRaw);
+        const bundle = await dbGetSlot(targetSlot);
+        if (!bundle) return;
         activeSlotLoaded = targetSlot;
         activeSlotIndicator.innerText = `Active: Slot ${targetSlot}`;
-        initializeBundle(bundle, `Slot ${targetSlot} Scene`);
-        renderMemorySlots();
+        await initializeBundle(bundle, `Slot ${targetSlot} Scene`);
+        await renderMemorySlots();
       } catch(e) {
         alert('Could not parse data from this memory slot.');
       }
     };
 
     // Empty / Delete Slot
-    window.emptySlot = function(slotNumber, e) {
+    window.emptySlot = async function(slotNumber, e) {
       if (e) e.stopPropagation();
       const targetSlot = parseInt(slotNumber, 10);
       if (confirm(`Empty Memory Slot ${targetSlot}?`)) {
-        localStorage.removeItem(`sf_player_slot_${targetSlot}`);
+        await dbClearSlot(targetSlot);
         if (activeSlotLoaded === targetSlot) {
           activeSlotLoaded = null;
           activeSlotIndicator.innerText = 'Active: None';
         }
-        renderMemorySlots();
+        await renderMemorySlots();
       }
     };
 
-    window.addEventListener('DOMContentLoaded', () => {
-      renderMemorySlots();
+    window.addEventListener('DOMContentLoaded', async () => {
+      await openPlayerDB();
+      await renderMemorySlots();
     });
   </script>
 </body>
