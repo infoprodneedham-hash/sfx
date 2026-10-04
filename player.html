@@ -29,7 +29,7 @@
         </div>
         <div>
           <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-            SoundForge Master Player <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v5.8 RACK</span>
+            SoundForge Master Player <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v6.0 RACK</span>
           </h1>
           <p class="text-xs text-slate-400">Multi-scene memory engine & universal .sfproj bundle player</p>
         </div>
@@ -88,7 +88,12 @@
     <!-- VISUAL TIMELINE RULER & ALL 4 TRACKS -->
     <div class="space-y-1">
       <div class="flex items-center justify-between text-xs text-slate-400 px-1 mb-1">
-        <span class="font-semibold text-white" id="scene-title">Drop a file or load an approved memory slot</span>
+        <div class="flex items-center gap-3">
+          <span class="font-semibold text-white" id="scene-title">Drop a file or load an approved memory slot</span>
+          <button id="btn-clear-timeline" class="text-[11px] text-rose-400 hover:text-rose-300 font-medium transition hidden flex items-center gap-1" title="Clear current timeline">
+            <i class="fa-solid fa-trash-can text-[10px]"></i> Clear Timeline
+          </button>
+        </div>
         <span class="font-mono text-cyan-400 text-[11px]" id="engine-status">Engine Idle</span>
       </div>
 
@@ -152,7 +157,7 @@
   </div>
 
   <!-- MODAL: SAVE TO SPECIFIC SLOT PICKER -->
-  <div id="save-slot-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+  <div id="save-slot-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-[#161b22] border border-[#30363d] rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-[#30363d] pb-3">
         <div class="text-sm font-bold text-white flex items-center gap-2">
@@ -162,9 +167,9 @@
           <i class="fa-solid fa-xmark text-sm"></i>
         </button>
       </div>
-      <p class="text-xs text-slate-300">Select which slot you would like to store the current scene into:</p>
+      <p class="text-xs text-slate-300">Click a slot to write the current approved scene:</p>
       
-      <div class="grid grid-cols-2 gap-2" id="modal-slots-list">
+      <div class="grid grid-cols-2 gap-2.5" id="modal-slots-list">
         <!-- Rendered by JS -->
       </div>
     </div>
@@ -212,8 +217,10 @@
     const cuesList = document.getElementById('cues-list');
     const btnOpenSaveModal = document.getElementById('btn-open-save-modal');
     const activeSlotIndicator = document.getElementById('active-slot-indicator');
+    const btnClearTimeline = document.getElementById('btn-clear-timeline');
     const saveSlotModal = document.getElementById('save-slot-modal');
     const btnCloseSaveModal = document.getElementById('btn-close-save-modal');
+    const modalSlotsList = document.getElementById('modal-slots-list');
 
     /* ==========================================================================
        FILE INGESTION & DEEP REPLACEMENT
@@ -249,11 +256,9 @@
       }
     }
 
-    // Complete teardown and clean initialization of a new scene
     async function initializeBundle(bundle, title = 'Imported Scene') {
       stopPlayback();
       
-      // Clear previous memory references
       currentBundle = null;
       decodedAudioMap.clear();
       lanesWrapper.innerHTML = '';
@@ -264,7 +269,6 @@
       const ctx = getAudioContext();
       engineStatus.innerText = 'Decoding audio channels...';
 
-      // Re-decode audio buffers
       for (const track of bundle.tracks) {
         if (!track.clips) continue;
         for (const clip of track.clips) {
@@ -297,6 +301,7 @@
       btnPlayPause.disabled = false;
       btnStop.disabled = false;
       btnOpenSaveModal.disabled = false;
+      btnClearTimeline.classList.remove('hidden');
 
       renderTimelineLanes();
       renderCueSheet();
@@ -304,6 +309,37 @@
       renderMemorySlots();
       engineStatus.innerText = 'Approved & Ready';
     }
+
+    /* CLEAR TIMELINE COMPLETELY */
+    btnClearTimeline.onclick = () => {
+      if (!currentBundle) return;
+      if (confirm('Clear the current timeline? (Saved memory slots will remain intact)')) {
+        stopPlayback();
+        currentBundle = null;
+        decodedAudioMap.clear();
+        activeSlotLoaded = null;
+        activeSlotIndicator.innerText = 'Active: None';
+        
+        document.getElementById('scene-title').innerText = 'Drop a file or load an approved memory slot';
+        document.getElementById('total-duration-display').innerText = 'No scene loaded';
+        timeDisplay.innerText = '00:00.00';
+        engineStatus.innerText = 'Timeline Cleared';
+        
+        btnPlayPause.disabled = true;
+        btnStop.disabled = true;
+        btnOpenSaveModal.disabled = true;
+        btnClearTimeline.classList.add('hidden');
+        
+        lanesWrapper.innerHTML = `
+          <div class="text-xs text-slate-500 italic text-center py-12" id="empty-timeline-hint">
+            Load a .sfproj bundle file above or pick a saved slot to activate playback.
+          </div>
+        `;
+        cuesList.innerHTML = '<div class="text-[11px] text-slate-600 italic">No cues loaded.</div>';
+        updatePlayheadUI(0);
+        renderMemorySlots();
+      }
+    };
 
     /* RENDER 4 LANES */
     function renderTimelineLanes() {
@@ -457,7 +493,7 @@
       isPlaying = false;
       document.getElementById('play-icon').className = 'fa-solid fa-play text-xs';
       document.getElementById('play-label').innerText = 'Play Scene';
-      engineStatus.innerText = 'Paused';
+      engineStatus.innerText = currentBundle ? 'Paused' : 'Engine Idle';
       updatePlayheadUI(playheadTime);
     }
 
@@ -485,7 +521,7 @@
     }
 
     /* ==========================================================================
-       8 PERSISTENT MEMORY SLOTS (EXPLICIT DIRECT TARGETING)
+       8 PERSISTENT MEMORY SLOTS (SAVE & LOAD)
        ========================================================================== */
     function renderMemorySlots() {
       const container = document.getElementById('slots-grid');
@@ -547,7 +583,7 @@
       }
     }
 
-    // Direct Save Function (Strictly target the requested slot integer)
+    // Direct Save Function
     window.saveToSlotDirect = function(slotNumber, event) {
       if (event) event.stopPropagation();
       if (!currentBundle) {
@@ -562,7 +598,12 @@
       activeSlotLoaded = targetSlot;
       activeSlotIndicator.innerText = `Active: Slot ${targetSlot}`;
       renderMemorySlots();
-      engineStatus.innerText = `Saved into Slot ${targetSlot}`;
+      engineStatus.innerText = `Saved into Slot ${targetSlot}!`;
+      setTimeout(() => {
+        if (currentBundle && engineStatus.innerText.includes('Saved')) {
+          engineStatus.innerText = 'Approved & Ready';
+        }
+      }, 2500);
     };
 
     // Modal Slot Selector
@@ -577,31 +618,44 @@
     };
 
     function renderModalSlots() {
-      const container = document.getElementById('modal-slots-list');
-      container.innerHTML = '';
+      modalSlotsList.innerHTML = '';
 
       for (let i = 1; i <= TOTAL_SLOTS; i++) {
         const slotKey = `sf_player_slot_${i}`;
-        const hasData = !!localStorage.getItem(slotKey);
+        const slotDataRaw = localStorage.getItem(slotKey);
+        const hasData = !!slotDataRaw;
+        let slotTitle = 'Empty Slot';
+
+        if (hasData) {
+          try {
+            const p = JSON.parse(slotDataRaw);
+            slotTitle = p.taskName || `Scene ${i}`;
+          } catch(e) {}
+        }
         
         const btn = document.createElement('button');
-        btn.className = `p-2.5 rounded-xl border text-left text-xs transition flex flex-col justify-between ${
+        btn.type = 'button';
+        btn.className = `p-2.5 rounded-xl border text-left text-xs transition flex flex-col justify-between cursor-pointer ${
           hasData 
             ? 'bg-[#1a202c] border-amber-800/60 hover:border-amber-400 text-amber-200' 
             : 'bg-[#111620] border-[#30363d] hover:border-cyan-400 text-slate-300'
         }`;
 
         btn.innerHTML = `
-          <span class="font-mono text-[10px] font-bold text-cyan-400">SLOT ${i}</span>
-          <span class="text-xs font-semibold mt-1 text-white">${hasData ? 'Overwrite Existing' : 'Save as New'}</span>
+          <div class="flex items-center justify-between w-full">
+            <span class="font-mono text-[10px] font-bold text-cyan-400">SLOT ${i}</span>
+            <span class="text-[9px] uppercase font-mono text-slate-400">${hasData ? 'Overwrite' : 'Empty'}</span>
+          </div>
+          <div class="text-xs font-semibold mt-1 text-white truncate w-full">${hasData ? slotTitle : 'Save into this slot'}</div>
         `;
 
-        btn.onclick = () => {
+        btn.onclick = (e) => {
+          e.preventDefault();
           saveToSlotDirect(i);
           saveSlotModal.classList.add('hidden');
         };
 
-        container.appendChild(btn);
+        modalSlotsList.appendChild(btn);
       }
     }
 
