@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoundForge Web Player</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background-color: #0b0f17; color: #c9d1d9; font-family: system-ui, -apple-system, sans-serif; user-select: none; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+    ::-webkit-scrollbar-track { background: #161b22; }
+    .timeline-grid {
+      background-size: 30px 100%;
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="max-w-3xl w-full bg-[#161b22] border border-[#30363d] rounded-2xl shadow-2xl p-6 space-y-5">
+    
+    <!-- HEADER -->
+    <div class="flex items-center justify-between border-b border-[#30363d] pb-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-cyan-900/40">
+          <i class="fa-solid fa-play text-white text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
+            SoundForge Master Player <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">STANDALONE ENGINE</span>
+          </h1>
+          <p class="text-xs text-slate-400">Multi-channel Web Audio & Speech player for .sfproj bundles</p>
+        </div>
+      </div>
+
+      <!-- FILE IMPORT BUTTON -->
+      <label class="px-3.5 py-2 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 text-xs font-bold rounded-xl border border-[#30363d] cursor-pointer flex items-center gap-2 transition shadow">
+        <i class="fa-solid fa-file-import"></i> Load .sfproj Bundle
+        <input type="file" id="file-input" accept=".sfproj,.json" class="hidden">
+      </label>
+    </div>
+
+    <!-- PERSISTENT MEMORY SLOTS (SAVE/LOAD SLOTS 1-4) -->
+    <div class="bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+          <i class="fa-solid fa-hard-drive text-cyan-400"></i> Local Memory Slots (Save & Quick Switch)
+        </span>
+        <span class="text-[10px] text-slate-500">Stored in browser local storage</span>
+      </div>
+      <div class="grid grid-cols-4 gap-2" id="slots-grid">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- MAIN PLAYER TRANSPORT & TIME DISPLAY -->
+    <div class="bg-[#0d1117] p-4 rounded-xl border border-[#30363d] flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button id="btn-jump-start" title="Rewind to start" class="w-10 h-10 rounded-xl bg-[#21262d] hover:bg-[#30363d] text-slate-300 flex items-center justify-center transition">
+          <i class="fa-solid fa-backward-step"></i>
+        </button>
+        <button id="btn-play-pause" class="px-5 h-10 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-cyan-900/30 transition disabled:opacity-40" disabled>
+          <i class="fa-solid fa-play text-xs" id="play-icon"></i> <span id="play-label">Play Scene</span>
+        </button>
+        <button id="btn-stop" class="w-10 h-10 rounded-xl bg-[#21262d] hover:bg-[#30363d] text-slate-300 flex items-center justify-center transition disabled:opacity-40" disabled>
+          <i class="fa-solid fa-stop"></i>
+        </button>
+      </div>
+
+      <div class="text-right">
+        <div class="font-mono text-cyan-400 font-bold text-lg" id="time-display">00:00.00</div>
+        <div class="text-[11px] text-slate-500" id="total-duration-display">No scene loaded</div>
+      </div>
+    </div>
+
+    <!-- VISUAL TIMELINE RULER & ALL 4 TRACKS -->
+    <div class="space-y-1">
+      <div class="flex items-center justify-between text-xs text-slate-400 px-1 mb-1">
+        <span class="font-semibold text-white" id="scene-title">Drop a file or select a memory slot</span>
+        <span class="font-mono text-cyan-400 text-[11px]" id="engine-status">Engine Idle</span>
+      </div>
+
+      <div class="h-44 bg-[#0d1117] border border-[#30363d] rounded-xl relative overflow-x-auto overflow-y-hidden timeline-grid p-1" id="timeline-scroll-lane">
+        <!-- Interactive Playhead Line -->
+        <div id="playhead" class="absolute top-0 bottom-0 w-[2px] bg-rose-500 z-30 pointer-events-none transition-all duration-75" style="left: 0px;">
+          <div class="w-3 h-3 bg-rose-500 rounded-full -ml-[5px] -mt-1 shadow-sm shadow-rose-500"></div>
+        </div>
+        <!-- Multi-Track Lanes Stack -->
+        <div id="lanes-wrapper" class="h-full relative min-w-full flex flex-col justify-around py-1">
+          <div class="text-xs text-slate-500 italic text-center py-12" id="empty-timeline-hint">
+            Load a .sfproj bundle file above or drop one directly onto this window.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4-CHANNEL COMPACT VOLUME MIXER -->
+    <div class="grid grid-cols-4 gap-3 bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
+      <div class="space-y-1">
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="text-cyan-400 font-semibold"><i class="fa-solid fa-microphone mr-1"></i> Speech</span>
+          <span class="font-mono text-slate-400" id="vol-lbl-0">100%</span>
+        </div>
+        <input type="range" class="w-full h-1 accent-cyan-400" min="0" max="1" step="0.05" value="1" oninput="setChannelVolume(0, this.value)">
+      </div>
+
+      <div class="space-y-1">
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="text-amber-400 font-semibold"><i class="fa-solid fa-bolt mr-1"></i> SFX</span>
+          <span class="font-mono text-slate-400" id="vol-lbl-1">90%</span>
+        </div>
+        <input type="range" class="w-full h-1 accent-amber-400" min="0" max="1" step="0.05" value="0.9" oninput="setChannelVolume(1, this.value)">
+      </div>
+
+      <div class="space-y-1">
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="text-orange-400 font-semibold"><i class="fa-solid fa-shoe-prints mr-1"></i> Foley</span>
+          <span class="font-mono text-slate-400" id="vol-lbl-2">80%</span>
+        </div>
+        <input type="range" class="w-full h-1 accent-orange-400" min="0" max="1" step="0.05" value="0.8" oninput="setChannelVolume(2, this.value)">
+      </div>
+
+      <div class="space-y-1">
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="text-emerald-400 font-semibold"><i class="fa-solid fa-wind mr-1"></i> Ambience</span>
+          <span class="font-mono text-slate-400" id="vol-lbl-3">75%</span>
+        </div>
+        <input type="range" class="w-full h-1 accent-emerald-400" min="0" max="1" step="0.05" value="0.75" oninput="setChannelVolume(3, this.value)">
+      </div>
+    </div>
+
+    <!-- DIALOGUE CUE VIEWER -->
+    <div class="space-y-1.5">
+      <div class="text-xs font-semibold text-slate-400">Speech Dialogue Cues:</div>
+      <div id="cues-list" class="space-y-1 max-h-36 overflow-y-auto pr-1">
+        <div class="text-[11px] text-slate-600 italic">No cues loaded.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const PIXELS_PER_SECOND = 24;
+    let audioCtx = null;
+    let availableVoices = [];
+    let currentBundle = null;
+    let isPlaying = false;
+    let playheadTime = 0;
+    let playbackStartTime = 0;
+    let animationFrameId = null;
+
+    let activeBufferNodes = [];
+    let scheduledSpeechTimeouts = [];
+    let decodedAudioMap = new Map(); // id -> AudioBuffer
+    let channelGains = [1.0, 0.9, 0.8, 0.75];
+
+    function getAudioContext() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function loadVoices() {
+      if ('speechSynthesis' in window) availableVoices = window.speechSynthesis.getVoices();
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      loadVoices();
+    }
+
+    const fileInput = document.getElementById('file-input');
+    const playhead = document.getElementById('playhead');
+    const btnPlayPause = document.getElementById('btn-play-pause');
+    const btnStop = document.getElementById('btn-stop');
+    const timeDisplay = document.getElementById('time-display');
+    const engineStatus = document.getElementById('engine-status');
+    const lanesWrapper = document.getElementById('lanes-wrapper');
+    const cuesList = document.getElementById('cues-list');
+
+    /* ==========================================================================
+       FILE PARSER (DECODES BASE64 TO AUDIOBUFFERS & INITIALIZES TIMELINE)
+       ========================================================================== */
+    fileInput.onchange = (e) => {
+      if (e.target.files && e.target.files[0]) {
+        loadBundleFile(e.target.files[0]);
+        fileInput.value = '';
+      }
+    };
+
+    window.ondragover = (e) => e.preventDefault();
+    window.ondrop = (e) => {
+      e.preventDefault();
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        loadBundleFile(e.dataTransfer.files[0]);
+      }
+    };
+
+    async function loadBundleFile(file) {
+      try {
+        engineStatus.innerText = 'Unpacking bundle...';
+        const text = await file.text();
+        const json = JSON.parse(text);
+
+        if (!json.tracks || !Array.isArray(json.tracks)) throw new Error('Invalid bundle format');
+        await initializeBundle(json, file.name);
+      } catch (err) {
+        alert('Could not load .sfproj file: ' + err.message);
+        engineStatus.innerText = 'Error loading file';
+      }
+    }
+
+    async function initializeBundle(bundle, filename = 'Imported Scene') {
+      stopPlayback();
+      currentBundle = bundle;
+      decodedAudioMap.clear();
+
+      const ctx = getAudioContext();
+      engineStatus.innerText = 'Decoding audio channels...';
+
+      // Decode Base64 audio into real Web Audio buffers
+      for (const track of bundle.tracks) {
+        for (const clip of track.clips) {
+          if (!clip.isSpeech && clip.audioData) {
+            try {
+              const res = await fetch(clip.audioData);
+              const ab = await res.arrayBuffer();
+              const decoded = await ctx.decodeAudioData(ab);
+              decodedAudioMap.set(clip.id, decoded);
+            } catch(e) { console.warn('Could not decode audio for clip:', clip.id, e); }
+          }
+        }
+      }
+
+      document.getElementById('scene-title').innerText = bundle.taskName || filename.replace(/\.[^/.]+$/, "");
+      
+      let maxDuration = 0;
+      bundle.tracks.forEach(t => t.clips.forEach(c => {
+        if (c.start + c.duration > maxDuration) maxDuration = c.start + c.duration;
+      }));
+      bundle.totalDuration = maxDuration;
+
+      document.getElementById('total-duration-display').innerText = `${maxDuration.toFixed(1)}s total scene duration`;
+      btnPlayPause.disabled = false;
+      btnStop.disabled = false;
+
+      renderTimelineLanes();
+      renderCueSheet();
+      seekTo(0);
+      engineStatus.innerText = 'Ready to play';
+    }
+
+    /* RENDER 4 TRACK LANES */
+    function renderTimelineLanes() {
+      lanesWrapper.innerHTML = '';
+      const totalWidth = Math.max(700, (currentBundle.totalDuration + 2) * PIXELS_PER_SECOND);
+      lanesWrapper.style.width = totalWidth + 'px';
+
+      const trackColors = [
+        'from-cyan-600 to-blue-700',
+        'from-amber-600 to-yellow-600',
+        'from-orange-600 to-amber-700',
+        'from-emerald-700 to-teal-800'
+      ];
+
+      currentBundle.tracks.forEach((track, tIdx) => {
+        const laneEl = document.createElement('div');
+        laneEl.className = 'h-9 relative border-b border-[#21262d] flex items-center';
+
+        track.clips.forEach(clip => {
+          const clipEl = document.createElement('div');
+          const leftPx = clip.start * PIXELS_PER_SECOND;
+          const widthPx = Math.max(24, clip.duration * PIXELS_PER_SECOND);
+
+          clipEl.className = `absolute h-7 rounded bg-gradient-to-r ${trackColors[tIdx]} border border-white/20 p-1 flex items-center justify-between text-[10px] text-white shadow truncate cursor-pointer hover:brightness-125 transition`;
+          clipEl.style.left = leftPx + 'px';
+          clipEl.style.width = widthPx + 'px';
+
+          clipEl.innerHTML = `
+            <span class="truncate pl-0.5">
+              ${clip.isSpeech ? '<i class="fa-solid fa-comment-dots mr-1"></i>' : ''}${clip.name || clip.speechText || 'Clip'}
+            </span>
+          `;
+          clipEl.onclick = () => seekTo(clip.start);
+          laneEl.appendChild(clipEl);
+        });
+
+        lanesWrapper.appendChild(laneEl);
+      });
+
+      updatePlayheadUI(playheadTime);
+    }
+
+    function renderCueSheet() {
+      cuesList.innerHTML = '';
+      const speechTrack = currentBundle.tracks.find(t => t.trackIndex === 0);
+      if (!speechTrack || !speechTrack.clips.length) {
+        cuesList.innerHTML = '<div class="text-[11px] text-slate-600 italic">No speech dialogue cues in this scene.</div>';
+        return;
+      }
+
+      speechTrack.clips.forEach((c, idx) => {
+        const row = document.createElement('div');
+        row.className = 'p-1.5 rounded bg-[#0d1117] border border-[#21262d] text-xs flex items-center justify-between text-slate-300';
+        row.innerHTML = `
+          <div class="flex items-center gap-2 truncate">
+            <span class="font-mono text-cyan-400 font-bold text-[10px]">${idx + 1}.</span>
+            <span class="truncate">${c.speechText}</span>
+          </div>
+          <span class="font-mono text-[10px] text-slate-500">${c.start.toFixed(1)}s (${c.voiceName ? c.voiceName.split(' ')[0] : 'Voice'})</span>
+        `;
+        cuesList.appendChild(row);
+      });
+    }
+
+    /* SYNCHRONIZED MULTI-CHANNEL PLAYBACK */
+    function resolveVoice(name, lang) {
+      if (!availableVoices.length) loadVoices();
+      let match = availableVoices.find(v => v.name === name);
+      if (match) return match;
+      if (lang) match = availableVoices.find(v => v.lang === lang);
+      return match || availableVoices[0] || null;
+    }
+
+    function startPlayback() {
+      if (!currentBundle) return;
+      const ctx = getAudioContext();
+      activeBufferNodes = [];
+      scheduledSpeechTimeouts = [];
+      playbackStartTime = ctx.currentTime - playheadTime;
+
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+      currentBundle.tracks.forEach((track, tIdx) => {
+        const gainVal = channelGains[tIdx];
+
+        track.clips.forEach(clip => {
+          if (clip.start + clip.duration > playheadTime) {
+            // Track 1 Speech Synthesis
+            if (clip.isSpeech && clip.speechText) {
+              const delayMs = Math.max(0, (clip.start - playheadTime) * 1000);
+              const tid = setTimeout(() => {
+                if (!isPlaying) return;
+                const utterance = new SpeechSynthesisUtterance(clip.speechText);
+                const v = resolveVoice(clip.voiceName, clip.voiceLang);
+                if (v) utterance.voice = v;
+                utterance.rate = 1.0; utterance.pitch = 1.0; utterance.volume = gainVal;
+                window.speechSynthesis.speak(utterance);
+              }, delayMs);
+              scheduledSpeechTimeouts.push(tid);
+              return;
+            }
+
+            // Tracks 2-4 Audio Buffer Playback
+            const buf = decodedAudioMap.get(clip.id);
+            if (!buf) return;
+
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+            const gain = ctx.createGain();
+            gain.gain.value = gainVal;
+            src.connect(gain); gain.connect(ctx.destination);
+
+            let offset = playheadTime >= clip.start ? playheadTime - clip.start : 0;
+            let startAt = playheadTime >= clip.start ? ctx.currentTime : ctx.currentTime + (clip.start - playheadTime);
+            src.start(startAt, offset);
+            activeBufferNodes.push(src);
+          }
+        });
+      });
+
+      isPlaying = true;
+      document.getElementById('play-icon').className = 'fa-solid fa-pause text-xs';
+      document.getElementById('play-label').innerText = 'Pause Scene';
+      engineStatus.innerText = 'Playing scene';
+
+      const tick = () => {
+        playheadTime = ctx.currentTime - playbackStartTime;
+        if (playheadTime >= currentBundle.totalDuration) {
+          seekTo(0); stopPlayback();
+          engineStatus.innerText = 'Finished';
+          return;
+        }
+        updatePlayheadUI(playheadTime);
+        animationFrameId = requestAnimationFrame(tick);
+      };
+      animationFrameId = requestAnimationFrame(tick);
+    }
+
+    function stopPlayback() {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      activeBufferNodes.forEach(node => { try { node.stop(); } catch(e){} });
+      activeBufferNodes = [];
+      scheduledSpeechTimeouts.forEach(t => clearTimeout(t));
+      scheduledSpeechTimeouts = [];
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+      isPlaying = false;
+      document.getElementById('play-icon').className = 'fa-solid fa-play text-xs';
+      document.getElementById('play-label').innerText = 'Play Scene';
+      engineStatus.innerText = 'Paused';
+      updatePlayheadUI(playheadTime);
+    }
+
+    btnPlayPause.onclick = () => isPlaying ? stopPlayback() : startPlayback();
+    btnStop.onclick = () => { stopPlayback(); seekTo(0); };
+    document.getElementById('btn-jump-start').onclick = () => seekTo(0);
+
+    function updatePlayheadUI(time) {
+      playheadTime = time;
+      playhead.style.left = (playheadTime * PIXELS_PER_SECOND) + 'px';
+      const mins = Math.floor(playheadTime / 60); const secs = Math.floor(playheadTime % 60); const ms = Math.floor((playheadTime % 1) * 100);
+      timeDisplay.innerText = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}.${ms < 10 ? '0' : ''}${ms}`;
+    }
+
+    function seekTo(targetTime) {
+      if (!currentBundle) return;
+      playheadTime = Math.max(0, Math.min(currentBundle.totalDuration, targetTime));
+      if (isPlaying) { stopPlayback(); startPlayback(); }
+      else updatePlayheadUI(playheadTime);
+    }
+
+    function setChannelVolume(channelIdx, val) {
+      channelGains[channelIdx] = parseFloat(val);
+      document.getElementById(`vol-lbl-${channelIdx}`).innerText = Math.round(val * 100) + '%';
+    }
+
+    /* ==========================================================================
+       PERSISTENT MEMORY SLOTS (SLOTS 1 TO 4)
+       ========================================================================== */
+    function renderMemorySlots() {
+      const container = document.getElementById('slots-grid');
+      container.innerHTML = '';
+
+      for (let i = 1; i <= 4; i++) {
+        const slotKey = `sf_player_slot_${i}`;
+        const slotDataRaw = localStorage.getItem(slotKey);
+        const hasData = !!slotDataRaw;
+        let slotName = 'Empty Slot';
+
+        if (hasData) {
+          try { slotName = JSON.parse(slotDataRaw).taskName || `Scene ${i}`; } catch(e){}
+        }
+
+        const slotEl = document.createElement('div');
+        slotEl.className = `p-2 rounded-lg border text-xs flex flex-col justify-between transition ${
+          hasData ? 'bg-[#161b22] border-cyan-800/60 hover:border-cyan-500' : 'bg-[#111620] border-[#21262d] opacity-60'
+        }`;
+
+        slotEl.innerHTML = `
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-bold text-[10px] text-cyan-400 font-mono">SLOT ${i}</span>
+            <div class="flex items-center gap-1">
+              ${currentBundle ? `<button class="hover:text-emerald-400 text-[10px]" title="Save Current Scene to Slot ${i}" onclick="saveToSlot(${i})"><i class="fa-solid fa-floppy-disk"></i></button>` : ''}
+              ${hasData ? `<button class="hover:text-rose-400 text-[10px]" title="Clear Slot" onclick="clearSlot(${i})"><i class="fa-solid fa-xmark"></i></button>` : ''}
+            </div>
+          </div>
+          <div class="truncate text-[11px] font-semibold text-white mb-1.5">${slotName}</div>
+          <button class="w-full py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-cyan-300 font-bold text-[10px] disabled:opacity-30 transition" ${hasData ? '' : 'disabled'} onclick="loadFromSlot(${i})">
+            Load Slot
+          </button>
+        `;
+        container.appendChild(slotEl);
+      }
+    }
+
+    window.saveToSlot = function(slotNumber) {
+      if (!currentBundle) return;
+      localStorage.setItem(`sf_player_slot_${slotNumber}`, JSON.stringify(currentBundle));
+      renderMemorySlots();
+      alert(`Current scene saved into Slot ${slotNumber}!`);
+    };
+
+    window.loadFromSlot = function(slotNumber) {
+      const dataRaw = localStorage.getItem(`sf_player_slot_${slotNumber}`);
+      if (!dataRaw) return;
+      try {
+        const bundle = JSON.parse(dataRaw);
+        initializeBundle(bundle, `Memory Slot ${slotNumber}`);
+      } catch(e) { alert('Could not load slot data.'); }
+    };
+
+    window.clearSlot = function(slotNumber) {
+      localStorage.removeItem(`sf_player_slot_${slotNumber}`);
+      renderMemorySlots();
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderMemorySlots();
+    });
+  </script>
+</body>
+</html>
