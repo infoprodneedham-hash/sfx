@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SoundForge Audio Workstation</title>
+  <title>SoundForge Audio Workstation & Compiler</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
@@ -31,7 +31,7 @@
       </div>
       <div>
         <h1 class="font-bold text-base text-white tracking-wide flex items-center gap-2">
-          SoundForge DAW <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v5.0 BUNDLE</span>
+          SoundForge DAW <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v5.5 COMPILER</span>
         </h1>
         <p class="text-xs text-slate-400" id="current-task-display">Active Task: Task 1</p>
       </div>
@@ -73,15 +73,15 @@
 
     <!-- Export & Audio Import Menu -->
     <div class="flex items-center space-x-2">
-      <!-- Import Audio / Bundle -->
+      <!-- Import Audio / .speech / .sfproj -->
       <label class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-slate-200 text-xs font-semibold rounded-lg border border-[#30363d] cursor-pointer flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-file-import text-cyan-400"></i> Import Audio / .sfproj
-        <input type="file" id="import-audio-input" accept="audio/*,.sfproj,.speech,.json" class="hidden">
+        <i class="fa-solid fa-file-import text-cyan-400"></i> Import Audio / .speech
+        <input type="file" id="import-audio-input" accept="audio/*,.speech,.sfproj,.json" class="hidden">
       </label>
 
-      <!-- EXPORT UNIFIED BUNDLE (Option 1) -->
-      <button id="btn-export-bundle" class="px-3 py-1.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-box-archive"></i> Export .sfproj Bundle
+      <!-- COMPILE & EXPORT MULTI-TRACK BUNDLE -->
+      <button id="btn-export-bundle" class="px-3.5 py-1.5 bg-gradient-to-r from-cyan-600 via-indigo-600 to-purple-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg shadow-lg flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-box-archive"></i> Compile & Export .sfproj Bundle
       </button>
 
       <!-- Traditional WAV & MP3 -->
@@ -97,7 +97,7 @@
   <!-- WORKSPACE BODY (SIDEBAR + MAIN CANVAS) -->
   <div class="flex flex-1 overflow-hidden">
 
-    <!-- LEFT SIDEBAR: TASKS & SOUND GENERATOR/IMPORT -->
+    <!-- LEFT SIDEBAR -->
     <aside class="w-80 bg-[#161b22] border-r border-[#30363d] flex flex-col flex-shrink-0">
       
       <!-- TASK MANAGER SECTION -->
@@ -127,15 +127,15 @@
           </button>
         </div>
 
-        <!-- TAB CONTENT 1: SFX LIBRARY -->
+        <!-- TAB CONTENT 1: SFX -->
         <div id="tab-sfx" class="flex-1 overflow-y-auto p-3 space-y-2">
-          <div class="text-[11px] text-slate-400 mb-1">Click to preview, or add directly to target track:</div>
+          <div class="text-[11px] text-slate-400 mb-1">Click to preview, or add directly to Track 2:</div>
           <div id="sfx-items-container" class="space-y-2"></div>
         </div>
 
-        <!-- TAB CONTENT 2: PROCEDURAL FOLEY GENERATOR -->
+        <!-- TAB CONTENT 2: FOLEY -->
         <div id="tab-foley" class="flex-1 overflow-y-auto p-3 space-y-3 hidden">
-          <div class="text-[11px] text-slate-400">Custom mechanical & acoustic Foley simulator:</div>
+          <div class="text-[11px] text-slate-400">Custom acoustic Foley simulator:</div>
           <div class="bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d]">
             <label class="text-xs font-semibold text-slate-300 block mb-1">Foley Material / Action</label>
             <select id="foley-type-select" class="w-full bg-[#161b22] border border-[#30363d] rounded p-1.5 text-xs text-white">
@@ -166,7 +166,7 @@
           </div>
         </div>
 
-        <!-- TAB CONTENT 3: AMBIENCE GENERATOR -->
+        <!-- TAB CONTENT 3: AMBIENCE -->
         <div id="tab-ambience" class="flex-1 overflow-y-auto p-3 space-y-3 hidden">
           <div class="text-[11px] text-slate-400">Generative background environments:</div>
           <div class="bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d]">
@@ -200,12 +200,12 @@
 
       </div>
 
-      <!-- DROPZONE -->
+      <!-- INGESTION DROPZONE (Supports .speech, .sfproj, audio) -->
       <div class="p-3 bg-[#0d1117] border-t border-[#30363d]">
         <div id="dropzone" class="border-2 border-dashed border-[#30363d] hover:border-cyan-500 rounded-lg p-3 text-center cursor-pointer transition">
           <i class="fa-solid fa-cloud-arrow-up text-cyan-400 text-lg mb-1 block"></i>
-          <span class="text-xs font-semibold text-slate-300 block">Drop Audio or .sfproj Bundle</span>
-          <span class="text-[10px] text-slate-500">Supports .sfproj, .speech, WAV, MP3</span>
+          <span class="text-xs font-semibold text-slate-300 block">Drop .speech, Audio or .sfproj</span>
+          <span class="text-[10px] text-slate-500">Auto-routes .speech lines to Track 1</span>
         </div>
       </div>
 
@@ -385,7 +385,7 @@
     let scheduledSpeechTimeouts = [];
     let animationFrameId = null;
 
-    /* Database & Storage Persistence */
+    /* IndexedDB Buffer Storage */
     let dbInstance = null;
     function openDatabase() {
       return new Promise((resolve) => {
@@ -441,12 +441,12 @@
           })),
           trackSettings: appState.trackSettings
         };
-        localStorage.setItem('soundforge_v5_bundle_state', JSON.stringify(payload));
+        localStorage.setItem('soundforge_v5_compiler_state', JSON.stringify(payload));
       } catch (err) { console.warn(err); }
     }
 
     async function loadFromLocalStorage() {
-      const data = localStorage.getItem('soundforge_v5_bundle_state');
+      const data = localStorage.getItem('soundforge_v5_compiler_state');
       if (data) {
         try {
           const parsed = JSON.parse(data);
@@ -498,7 +498,7 @@
       stopPlayback();
       const count = appState.tasks.length + 1;
       const newId = 'task_' + Date.now();
-      appState.tasks.push({ id: newId, name: `Task ${count}: New Scene`, tracks: [[], [], [], []] });
+      appState.tasks.push({ id: newId, name: `Task ${count}: Scene`, tracks: [[], [], [], []] });
       appState.activeTaskId = newId;
       seekTo(0); renderTasks(); renderTimeline(); saveToLocalStorage();
     }
@@ -533,7 +533,7 @@
       seekTo(0); renderTasks(); renderTimeline(); saveToLocalStorage();
     }
 
-    /* SFX, Foley, Ambience Buffers */
+    /* SFX, Foley, Ambience */
     function createAntiClickBuffer(duration, generatorFn) {
       const ctx = getAudioContext();
       const sampleRate = ctx.sampleRate;
@@ -832,78 +832,60 @@
     }
 
     /* ==========================================================================
-       OPTION 1: UNIFIED .SFPROJ BUNDLE EXPORT & IMPORT
-       Encapsulates all 4 tracks, speech metadata, and base64 audio in one file
+       MULTI-FILE INGESTION ENGINE (.speech, .sfproj, Audio)
        ========================================================================== */
-    function blobToBase64(blob) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
-      });
-    }
-
-    document.getElementById('btn-export-bundle').onclick = async () => {
-      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
-      document.getElementById('export-status').innerText = 'Packing .sfproj bundle...';
-
-      const tracksData = await Promise.all(task.tracks.map(async (track, trackIdx) => {
-        const clipsData = await Promise.all(track.map(async (clip) => {
-          let base64Audio = null;
-          if (!clip.isSpeech && clip.bufferKey && bufferRegistry.has(clip.bufferKey)) {
-            const buf = bufferRegistry.get(clip.bufferKey);
-            const wavBlob = audioBufferToWavBlob(buf);
-            base64Audio = await blobToBase64(wavBlob);
-          }
-          return {
-            id: clip.id,
-            name: clip.name,
-            start: clip.start,
-            duration: clip.duration,
-            color: clip.color,
-            isSpeech: !!clip.isSpeech,
-            speechText: clip.speechText || "",
-            voiceName: clip.voiceName || "",
-            voiceLang: clip.voiceLang || "en-AU",
-            audioData: base64Audio
-          };
-        }));
-
-        return {
-          trackIndex: trackIdx,
-          trackName: trackIdx === 0 ? "Speech" : trackIdx === 1 ? "SFX" : trackIdx === 2 ? "Foley" : "Ambience",
-          volume: appState.trackSettings[trackIdx].volume,
-          clips: clipsData
-        };
-      }));
-
-      const bundle = {
-        format: "soundforge-multitrack-bundle",
-        version: "1.0",
-        taskName: task.name,
-        exportedAt: new Date().toISOString(),
-        trackSettings: appState.trackSettings,
-        tracks: tracksData
-      };
-
-      const jsonBlob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
-      const filename = `${task.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.sfproj`;
-      triggerDownload(jsonBlob, filename);
-      document.getElementById('export-status').innerText = 'Exported .sfproj Bundle!';
-      setTimeout(() => { document.getElementById('export-status').innerText = 'Ready'; }, 3000);
-    };
-
     async function handleFileImport(file, targetTrack = 0) {
       if (!file) return;
 
-      // Handle Unified .sfproj Bundle
+      // 1. INGEST NATIVE .SPEECH FILES DIRECTLY ONTO TRACK 1
+      if (file.name.endsWith('.speech')) {
+        document.getElementById('export-status').innerText = `Ingesting .speech sequence: ${file.name}...`;
+        try {
+          const text = await file.text();
+          const json = JSON.parse(text);
+
+          if (!json.clips || !Array.isArray(json.clips)) {
+            throw new Error('File does not contain valid .speech clips array.');
+          }
+
+          const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+          stopPlayback();
+
+          // Map clips to Track 1 (Speech lane)
+          json.clips.forEach((c, idx) => {
+            task.tracks[0].push({
+              id: 'speech_clip_' + Date.now() + '_' + idx,
+              name: c.name || (c.text.substring(0, 24) + '...'),
+              start: Math.max(0, c.start),
+              duration: c.duration || 2.0,
+              color: 'from-cyan-600 to-blue-700',
+              isSpeech: true,
+              speechText: c.text,
+              voiceName: c.voiceName || '',
+              voiceLang: c.voiceLang || 'en-AU'
+            });
+          });
+
+          renderTimeline();
+          saveToLocalStorage();
+          document.getElementById('export-status').innerText = `Ingested ${json.clips.length} speech clips onto Track 1!`;
+          setTimeout(() => { document.getElementById('export-status').innerText = 'Ready'; }, 3000);
+          return;
+        } catch (err) {
+          alert('Could not ingest .speech file: ' + err.message);
+          document.getElementById('export-status').innerText = 'Error loading .speech';
+          return;
+        }
+      }
+
+      // 2. INGEST .SFPROJ BUNDLE
       if (file.name.endsWith('.sfproj') || file.name.endsWith('.json')) {
         try {
           const text = await file.text();
           const json = JSON.parse(text);
 
           if (json.format === "soundforge-multitrack-bundle" && json.tracks) {
-            document.getElementById('export-status').innerText = 'Loading bundle...';
+            document.getElementById('export-status').innerText = 'Loading .sfproj bundle...';
             stopPlayback();
 
             const newTaskId = 'task_' + Date.now();
@@ -948,12 +930,13 @@
 
             renderTasks(); renderTimeline(); saveToLocalStorage();
             document.getElementById('export-status').innerText = 'Loaded .sfproj Bundle!';
+            setTimeout(() => { document.getElementById('export-status').innerText = 'Ready'; }, 3000);
             return;
           }
-        } catch(err) { console.warn('Not bundle, attempting fallback...', err); }
+        } catch(err) { console.warn('Non-bundle JSON, attempting audio fallback...', err); }
       }
 
-      // Standard Audio Import
+      // 3. INGEST STANDARD AUDIO (WAV, MP3, OGG)
       document.getElementById('export-status').innerText = `Decoding ${file.name}...`;
       try {
         const ctx = getAudioContext();
@@ -971,10 +954,115 @@
         });
         renderTimeline(); saveToLocalStorage();
         document.getElementById('export-status').innerText = 'Audio imported cleanly!';
+        setTimeout(() => { document.getElementById('export-status').innerText = 'Ready'; }, 3000);
       } catch (err) { alert('Could not decode file.'); }
     }
 
-    /* Offline Audio Mixdown & Encoders (WAV & MP3) */
+    function setupDragAndDrop() {
+      const dropzone = document.getElementById('dropzone');
+      const importInput = document.getElementById('import-audio-input');
+
+      dropzone.addEventListener('click', () => importInput.click());
+      importInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          handleFileImport(e.target.files[0], 0);
+          importInput.value = '';
+        }
+      });
+
+      ['dragenter', 'dragover'].forEach(name => {
+        dropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          dropzone.classList.add('border-cyan-400', 'bg-cyan-950/20');
+        });
+      });
+      ['dragleave', 'drop'].forEach(name => {
+        dropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('border-cyan-400', 'bg-cyan-950/20');
+        });
+      });
+      dropzone.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          handleFileImport(e.dataTransfer.files[0], 0);
+        }
+      });
+
+      document.querySelectorAll('.track-drop-target').forEach(lane => {
+        lane.addEventListener('dragover', (e) => e.preventDefault());
+        lane.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const trackIdx = parseInt(lane.getAttribute('data-track-id'), 10);
+          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleFileImport(e.dataTransfer.files[0], trackIdx);
+          }
+        });
+      });
+    }
+
+    /* ==========================================================================
+       COMPILE & EXPORT UNIFIED .SFPROJ BUNDLE FOR STANDALONE PLAYER
+       ========================================================================== */
+    function blobToBase64(blob) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    document.getElementById('btn-export-bundle').onclick = async () => {
+      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+      document.getElementById('export-status').innerText = 'Compiling .sfproj bundle...';
+
+      const tracksData = await Promise.all(task.tracks.map(async (track, trackIdx) => {
+        const clipsData = await Promise.all(track.map(async (clip) => {
+          let base64Audio = null;
+          // Encode binary audio buffers (SFX, Foley, Ambience) to base64 WAV
+          if (!clip.isSpeech && clip.bufferKey && bufferRegistry.has(clip.bufferKey)) {
+            const buf = bufferRegistry.get(clip.bufferKey);
+            const wavBlob = audioBufferToWavBlob(buf);
+            base64Audio = await blobToBase64(wavBlob);
+          }
+          return {
+            id: clip.id,
+            name: clip.name,
+            start: clip.start,
+            duration: clip.duration,
+            color: clip.color,
+            isSpeech: !!clip.isSpeech,
+            speechText: clip.speechText || "",
+            voiceName: clip.voiceName || "",
+            voiceLang: clip.voiceLang || "en-AU",
+            audioData: base64Audio
+          };
+        }));
+
+        return {
+          trackIndex: trackIdx,
+          trackName: trackIdx === 0 ? "Speech" : trackIdx === 1 ? "SFX" : trackIdx === 2 ? "Foley" : "Ambience",
+          volume: appState.trackSettings[trackIdx].volume,
+          clips: clipsData
+        };
+      }));
+
+      const bundle = {
+        format: "soundforge-multitrack-bundle",
+        version: "1.0",
+        taskName: task.name,
+        exportedAt: new Date().toISOString(),
+        trackSettings: appState.trackSettings,
+        tracks: tracksData
+      };
+
+      const jsonBlob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+      const filename = `${task.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.sfproj`;
+      triggerDownload(jsonBlob, filename);
+      document.getElementById('export-status').innerText = 'Compiled .sfproj Bundle!';
+      setTimeout(() => { document.getElementById('export-status').innerText = 'Ready'; }, 3000);
+    };
+
+    /* Standard WAV & MP3 Offline Mixdown */
     async function renderMixdownBuffer() {
       const task = appState.tasks.find(t => t.id === appState.activeTaskId);
       let maxEnd = 0;
