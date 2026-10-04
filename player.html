@@ -29,7 +29,7 @@
         </div>
         <div>
           <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-            SoundForge Master Player <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">8-SLOT RACK</span>
+            SoundForge Master Player <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v5.8 RACK</span>
           </h1>
           <p class="text-xs text-slate-400">Multi-scene memory engine & universal .sfproj bundle player</p>
         </div>
@@ -151,6 +151,25 @@
 
   </div>
 
+  <!-- MODAL: SAVE TO SPECIFIC SLOT PICKER -->
+  <div id="save-slot-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-[#161b22] border border-[#30363d] rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-[#30363d] pb-3">
+        <div class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-floppy-disk text-cyan-400"></i> Choose Target Memory Slot
+        </div>
+        <button id="btn-close-save-modal" class="text-slate-400 hover:text-white text-xs p-1">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-300">Select which slot you would like to store the current scene into:</p>
+      
+      <div class="grid grid-cols-2 gap-2" id="modal-slots-list">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
   <script>
     const PIXELS_PER_SECOND = 24;
     const TOTAL_SLOTS = 8;
@@ -193,9 +212,11 @@
     const cuesList = document.getElementById('cues-list');
     const btnOpenSaveModal = document.getElementById('btn-open-save-modal');
     const activeSlotIndicator = document.getElementById('active-slot-indicator');
+    const saveSlotModal = document.getElementById('save-slot-modal');
+    const btnCloseSaveModal = document.getElementById('btn-close-save-modal');
 
     /* ==========================================================================
-       FILE INGESTION & DECODING
+       FILE INGESTION & DEEP REPLACEMENT
        ========================================================================== */
     fileInput.onchange = (e) => {
       if (e.target.files && e.target.files[0]) {
@@ -228,15 +249,24 @@
       }
     }
 
+    // Complete teardown and clean initialization of a new scene
     async function initializeBundle(bundle, title = 'Imported Scene') {
       stopPlayback();
-      currentBundle = bundle;
+      
+      // Clear previous memory references
+      currentBundle = null;
       decodedAudioMap.clear();
+      lanesWrapper.innerHTML = '';
+      cuesList.innerHTML = '';
+
+      currentBundle = bundle;
 
       const ctx = getAudioContext();
       engineStatus.innerText = 'Decoding audio channels...';
 
+      // Re-decode audio buffers
       for (const track of bundle.tracks) {
+        if (!track.clips) continue;
         for (const clip of track.clips) {
           if (!clip.isSpeech && clip.audioData) {
             try {
@@ -244,7 +274,9 @@
               const ab = await res.arrayBuffer();
               const decoded = await ctx.decodeAudioData(ab);
               decodedAudioMap.set(clip.id, decoded);
-            } catch(e) { console.warn('Could not decode clip:', clip.id, e); }
+            } catch(e) { 
+              console.warn('Could not decode clip:', clip.id, e); 
+            }
           }
         }
       }
@@ -252,9 +284,13 @@
       document.getElementById('scene-title').innerText = bundle.taskName || title.replace(/\.[^/.]+$/, "");
       
       let maxDuration = 0;
-      bundle.tracks.forEach(t => t.clips.forEach(c => {
-        if (c.start + c.duration > maxDuration) maxDuration = c.start + c.duration;
-      }));
+      bundle.tracks.forEach(t => {
+        if (t.clips) {
+          t.clips.forEach(c => {
+            if (c.start + c.duration > maxDuration) maxDuration = c.start + c.duration;
+          });
+        }
+      });
       bundle.totalDuration = maxDuration;
 
       document.getElementById('total-duration-display').innerText = `${maxDuration.toFixed(1)}s total scene duration`;
@@ -265,12 +301,15 @@
       renderTimelineLanes();
       renderCueSheet();
       seekTo(0);
+      renderMemorySlots();
       engineStatus.innerText = 'Approved & Ready';
     }
 
     /* RENDER 4 LANES */
     function renderTimelineLanes() {
       lanesWrapper.innerHTML = '';
+      if (!currentBundle || !currentBundle.tracks) return;
+
       const totalWidth = Math.max(700, (currentBundle.totalDuration + 2) * PIXELS_PER_SECOND);
       lanesWrapper.style.width = totalWidth + 'px';
 
@@ -285,23 +324,25 @@
         const laneEl = document.createElement('div');
         laneEl.className = 'h-9 relative border-b border-[#21262d] flex items-center';
 
-        track.clips.forEach(clip => {
-          const clipEl = document.createElement('div');
-          const leftPx = clip.start * PIXELS_PER_SECOND;
-          const widthPx = Math.max(24, clip.duration * PIXELS_PER_SECOND);
+        if (track.clips) {
+          track.clips.forEach(clip => {
+            const clipEl = document.createElement('div');
+            const leftPx = clip.start * PIXELS_PER_SECOND;
+            const widthPx = Math.max(24, clip.duration * PIXELS_PER_SECOND);
 
-          clipEl.className = `absolute h-7 rounded bg-gradient-to-r ${trackColors[tIdx]} border border-white/20 p-1 flex items-center justify-between text-[10px] text-white shadow truncate cursor-pointer hover:brightness-125 transition`;
-          clipEl.style.left = leftPx + 'px';
-          clipEl.style.width = widthPx + 'px';
+            clipEl.className = `absolute h-7 rounded bg-gradient-to-r ${trackColors[tIdx] || 'from-slate-700 to-slate-800'} border border-white/20 p-1 flex items-center justify-between text-[10px] text-white shadow truncate cursor-pointer hover:brightness-125 transition`;
+            clipEl.style.left = leftPx + 'px';
+            clipEl.style.width = widthPx + 'px';
 
-          clipEl.innerHTML = `
-            <span class="truncate pl-0.5">
-              ${clip.isSpeech ? '<i class="fa-solid fa-comment-dots mr-1"></i>' : ''}${clip.name || clip.speechText || 'Clip'}
-            </span>
-          `;
-          clipEl.onclick = () => seekTo(clip.start);
-          laneEl.appendChild(clipEl);
-        });
+            clipEl.innerHTML = `
+              <span class="truncate pl-0.5">
+                ${clip.isSpeech ? '<i class="fa-solid fa-comment-dots mr-1"></i>' : ''}${clip.name || clip.speechText || 'Clip'}
+              </span>
+            `;
+            clipEl.onclick = () => seekTo(clip.start);
+            laneEl.appendChild(clipEl);
+          });
+        }
 
         lanesWrapper.appendChild(laneEl);
       });
@@ -311,8 +352,9 @@
 
     function renderCueSheet() {
       cuesList.innerHTML = '';
+      if (!currentBundle) return;
       const speechTrack = currentBundle.tracks.find(t => t.trackIndex === 0);
-      if (!speechTrack || !speechTrack.clips.length) {
+      if (!speechTrack || !speechTrack.clips || !speechTrack.clips.length) {
         cuesList.innerHTML = '<div class="text-[11px] text-slate-600 italic">No speech dialogue cues in this scene.</div>';
         return;
       }
@@ -351,6 +393,7 @@
 
       currentBundle.tracks.forEach((track, tIdx) => {
         const gainVal = channelGains[tIdx];
+        if (!track.clips) return;
 
         track.clips.forEach(clip => {
           if (clip.start + clip.duration > playheadTime) {
@@ -442,7 +485,7 @@
     }
 
     /* ==========================================================================
-       8 PERSISTENT MEMORY SLOTS ENGINE (SAVE TO SLOT / EMPTY SLOT / LOAD)
+       8 PERSISTENT MEMORY SLOTS (EXPLICIT DIRECT TARGETING)
        ========================================================================== */
     function renderMemorySlots() {
       const container = document.getElementById('slots-grid');
@@ -453,7 +496,7 @@
         const slotDataRaw = localStorage.getItem(slotKey);
         const hasData = !!slotDataRaw;
         let slotTitle = 'Empty';
-        let slotSub = 'No scene data';
+        let slotSub = 'No scene stored';
 
         if (hasData) {
           try {
@@ -494,7 +537,7 @@
             <button class="flex-1 py-1 rounded bg-[#21262d] hover:bg-[#30363d] text-cyan-300 font-bold text-[10px] transition disabled:opacity-30 disabled:cursor-not-allowed" ${hasData ? '' : 'disabled'} onclick="loadFromSlot(${i})">
               ${isCurrentActive ? 'Reload' : 'Load'}
             </button>
-            <button class="px-2 py-1 rounded bg-[#21262d] hover:bg-cyan-700 hover:text-white text-slate-300 text-[10px] transition" title="Overwrite Slot ${i} with Current Scene" onclick="saveToSlot(${i})">
+            <button class="px-2 py-1 rounded bg-[#21262d] hover:bg-cyan-700 hover:text-white text-slate-300 text-[10px] transition" title="Save Current Scene into Slot ${i}" onclick="saveToSlotDirect(${i}, event)">
               <i class="fa-solid fa-floppy-disk"></i>
             </button>
           </div>
@@ -504,40 +547,74 @@
       }
     }
 
-    // Direct Save into Specified Slot
-    window.saveToSlot = function(slotNumber) {
+    // Direct Save Function (Strictly target the requested slot integer)
+    window.saveToSlotDirect = function(slotNumber, event) {
+      if (event) event.stopPropagation();
       if (!currentBundle) {
-        alert('Please load an approved scene before saving to a slot.');
+        alert('Please load or import an approved scene before saving to a slot.');
         return;
       }
-      localStorage.setItem(`sf_player_slot_${slotNumber}`, JSON.stringify(currentBundle));
-      activeSlotLoaded = slotNumber;
-      activeSlotIndicator.innerText = `Active: Slot ${slotNumber}`;
+      
+      const targetSlot = parseInt(slotNumber, 10);
+      if (isNaN(targetSlot) || targetSlot < 1 || targetSlot > TOTAL_SLOTS) return;
+
+      localStorage.setItem(`sf_player_slot_${targetSlot}`, JSON.stringify(currentBundle));
+      activeSlotLoaded = targetSlot;
+      activeSlotIndicator.innerText = `Active: Slot ${targetSlot}`;
       renderMemorySlots();
-      engineStatus.innerText = `Saved into Slot ${slotNumber}`;
+      engineStatus.innerText = `Saved into Slot ${targetSlot}`;
     };
 
-    // Dedicated Save Button Action (Prompts slot target)
+    // Modal Slot Selector
     btnOpenSaveModal.onclick = () => {
       if (!currentBundle) return;
-      const slotChoice = prompt(`Enter memory slot number to save this scene into (1 to ${TOTAL_SLOTS}):`, activeSlotLoaded || "1");
-      const num = parseInt(slotChoice, 10);
-      if (num >= 1 && num <= TOTAL_SLOTS) {
-        saveToSlot(num);
-      } else if (slotChoice !== null) {
-        alert(`Invalid slot. Please choose a number between 1 and ${TOTAL_SLOTS}.`);
-      }
+      renderModalSlots();
+      saveSlotModal.classList.remove('hidden');
     };
+
+    btnCloseSaveModal.onclick = () => {
+      saveSlotModal.classList.add('hidden');
+    };
+
+    function renderModalSlots() {
+      const container = document.getElementById('modal-slots-list');
+      container.innerHTML = '';
+
+      for (let i = 1; i <= TOTAL_SLOTS; i++) {
+        const slotKey = `sf_player_slot_${i}`;
+        const hasData = !!localStorage.getItem(slotKey);
+        
+        const btn = document.createElement('button');
+        btn.className = `p-2.5 rounded-xl border text-left text-xs transition flex flex-col justify-between ${
+          hasData 
+            ? 'bg-[#1a202c] border-amber-800/60 hover:border-amber-400 text-amber-200' 
+            : 'bg-[#111620] border-[#30363d] hover:border-cyan-400 text-slate-300'
+        }`;
+
+        btn.innerHTML = `
+          <span class="font-mono text-[10px] font-bold text-cyan-400">SLOT ${i}</span>
+          <span class="text-xs font-semibold mt-1 text-white">${hasData ? 'Overwrite Existing' : 'Save as New'}</span>
+        `;
+
+        btn.onclick = () => {
+          saveToSlotDirect(i);
+          saveSlotModal.classList.add('hidden');
+        };
+
+        container.appendChild(btn);
+      }
+    }
 
     // Load from Specified Slot
     window.loadFromSlot = function(slotNumber) {
-      const dataRaw = localStorage.getItem(`sf_player_slot_${slotNumber}`);
+      const targetSlot = parseInt(slotNumber, 10);
+      const dataRaw = localStorage.getItem(`sf_player_slot_${targetSlot}`);
       if (!dataRaw) return;
       try {
         const bundle = JSON.parse(dataRaw);
-        activeSlotLoaded = slotNumber;
-        activeSlotIndicator.innerText = `Active: Slot ${slotNumber}`;
-        initializeBundle(bundle, `Slot ${slotNumber} Scene`);
+        activeSlotLoaded = targetSlot;
+        activeSlotIndicator.innerText = `Active: Slot ${targetSlot}`;
+        initializeBundle(bundle, `Slot ${targetSlot} Scene`);
         renderMemorySlots();
       } catch(e) {
         alert('Could not parse data from this memory slot.');
@@ -547,9 +624,10 @@
     // Empty / Delete Slot
     window.emptySlot = function(slotNumber, e) {
       if (e) e.stopPropagation();
-      if (confirm(`Empty Memory Slot ${slotNumber}?`)) {
-        localStorage.removeItem(`sf_player_slot_${slotNumber}`);
-        if (activeSlotLoaded === slotNumber) {
+      const targetSlot = parseInt(slotNumber, 10);
+      if (confirm(`Empty Memory Slot ${targetSlot}?`)) {
+        localStorage.removeItem(`sf_player_slot_${targetSlot}`);
+        if (activeSlotLoaded === targetSlot) {
           activeSlotLoaded = null;
           activeSlotIndicator.innerText = 'Active: None';
         }
