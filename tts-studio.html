@@ -25,12 +25,12 @@
         </div>
         <div>
           <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-            TTS Audio Generator <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v3.0 PRO</span>
+            TTS Audio Generator <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">100% Offline</span>
           </h1>
-          <p class="text-xs text-slate-400">Export clean human speech files for SoundForge DAW</p>
+          <p class="text-xs text-slate-400">Direct tab-capture recorder for SoundForge DAW</p>
         </div>
       </div>
-      <span class="text-xs px-2.5 py-1 bg-emerald-950/80 text-emerald-400 border border-emerald-800 rounded-full font-mono flex items-center gap-1.5">
+      <span class="text-xs px-2.5 py-1 bg-emerald-950/80 text-emerald-400 border border-emerald-800 rounded-full font-mono flex items-center gap-1.5" id="engine-badge">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Ready
       </span>
     </div>
@@ -58,24 +58,19 @@
     <!-- VOICE SELECTION & PROFILES -->
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <label class="block text-xs font-semibold text-slate-300 mb-1">Voice Accent & Dialect</label>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">System Natural Voice</label>
         <select id="voice-preset" class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg p-2 text-xs text-white focus:outline-none focus:border-cyan-500">
-          <option value="en-AU" selected>English (Australian)</option>
-          <option value="en-GB">English (British)</option>
-          <option value="en-US">English (United States)</option>
-          <option value="en-CA">English (Canadian)</option>
-          <option value="en-IN">English (Indian)</option>
-          <option value="en-IE">English (Irish)</option>
+          <option value="">Scanning installed OS voices...</option>
         </select>
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-300 mb-1">Playback Speed</label>
-        <select id="speed-preset" class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg p-2 text-xs text-white focus:outline-none focus:border-cyan-500">
-          <option value="1.0" selected>Natural Pace (1.0x)</option>
-          <option value="0.9">Deliberate & Authoritative (0.9x)</option>
-          <option value="1.15">Fast & Upbeat (1.15x)</option>
-          <option value="1.3">High-Speed Narration (1.3x)</option>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">Speed & Pitch Delivery</label>
+        <select id="tone-preset" class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg p-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+          <option value="1.0|1.0" selected>Natural Pace (1.0x)</option>
+          <option value="0.9|0.95">Deliberate & Authoritative (0.9x)</option>
+          <option value="1.15|1.05">Fast & Upbeat (1.15x)</option>
+          <option value="1.3|1.1">High-Speed Narration (1.3x)</option>
         </select>
       </div>
     </div>
@@ -88,20 +83,25 @@
         </button>
         <div>
           <div class="text-xs font-semibold text-white">Live Voice Preview</div>
-          <div class="text-[11px] text-slate-400" id="preview-status">Ready to generate speech</div>
+          <div class="text-[11px] text-slate-400" id="preview-status">Ready to preview voice</div>
         </div>
       </div>
-      <div class="text-xs font-mono text-cyan-400 font-bold" id="duration-display">00:00</div>
+      <div class="text-xs font-mono text-cyan-400 font-bold" id="duration-display">Live Preview</div>
     </div>
 
-    <!-- EXPORT ACTIONS (WAV & MP3 TO DOWNLOADS) -->
-    <div class="border-t border-[#30363d] pt-4 space-y-2">
+    <!-- CAPTURE & EXPORT WORKFLOW -->
+    <div class="border-t border-[#30363d] pt-4 space-y-3">
+      <div class="p-3 bg-cyan-950/30 border border-cyan-900/50 rounded-xl text-xs text-slate-300">
+        <span class="font-semibold text-cyan-400 block mb-0.5"><i class="fa-solid fa-circle-info mr-1"></i> Studio High-Fidelity Capture</span>
+        To capture the exact system voice into a file, click Download below and select <strong>"This Tab"</strong> (ensure <strong>Share Audio</strong> is checked). The audio will be captured cleanly and exported directly to your Downloads.
+      </div>
+
       <div class="text-[11px] text-slate-400 flex items-center justify-between">
-        <span>Direct Download (Exact voice as heard in preview):</span>
+        <span>Direct Download (Verbatim system recording):</span>
         <span id="export-status" class="text-emerald-400 font-medium"></span>
       </div>
       
-      <div class="grid grid-cols-2 gap-3 pt-1">
+      <div class="grid grid-cols-2 gap-3">
         <!-- Export WAV -->
         <button id="btn-download-wav" class="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition">
           <i class="fa-solid fa-file-arrow-down text-sm"></i> Download WAV (16-bit)
@@ -117,10 +117,10 @@
   </div>
 
   <script>
+    let isPlayingPreview = false;
+    let availableVoices = [];
     let audioCtx = null;
-    let cachedAudioBuffer = null;
-    let activeSourceNode = null;
-    let isPlaying = false;
+    let captureStream = null;
 
     function getAudioContext() {
       if (!audioCtx) {
@@ -134,200 +134,197 @@
 
     const ttsInput = document.getElementById('tts-input');
     const voiceSelect = document.getElementById('voice-preset');
-    const speedSelect = document.getElementById('speed-preset');
+    const toneSelect = document.getElementById('tone-preset');
+    const previewStatus = document.getElementById('preview-status');
+    const exportStatus = document.getElementById('export-status');
 
     ttsInput.oninput = () => {
       document.getElementById('char-count').innerText = `${ttsInput.value.length} characters`;
-      cachedAudioBuffer = null;
     };
     ttsInput.oninput();
 
-    voiceSelect.onchange = () => { cachedAudioBuffer = null; };
-    speedSelect.onchange = () => { cachedAudioBuffer = null; };
+    // Populate Real OS Voices
+    function loadVoices() {
+      if (!('speechSynthesis' in window)) {
+        voiceSelect.innerHTML = '<option value="0">Default Voice</option>';
+        return;
+      }
+      availableVoices = window.speechSynthesis.getVoices();
+      if (!availableVoices.length) return;
+
+      voiceSelect.innerHTML = '';
+      availableVoices.forEach((voice, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' [Default]' : ''}`;
+        voiceSelect.appendChild(option);
+      });
+    }
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      loadVoices();
+    }
 
     /* ==========================================================================
-       AUTHENTIC HUMAN SPEECH ENGINE (Split-Text Direct Neural Pipeline)
+       PREVIEW ENGINE (Pure Native Speech Synthesis)
        ========================================================================== */
-    function splitIntoChunks(text, maxLen = 120) {
-      const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
-      const chunks = [];
-      let current = '';
-
-      for (let s of sentences) {
-        s = s.trim();
-        if (!s) continue;
-        if ((current + ' ' + s).trim().length <= maxLen) {
-          current = (current + ' ' + s).trim();
-        } else {
-          if (current) chunks.push(current);
-          if (s.length > maxLen) {
-            const words = s.split(' ');
-            let sub = '';
-            for (let w of words) {
-              if ((sub + ' ' + w).trim().length <= maxLen) {
-                sub = (sub + ' ' + w).trim();
-              } else {
-                if (sub) chunks.push(sub);
-                sub = w;
-              }
-            }
-            if (sub) current = sub;
-            else current = '';
-          } else {
-            current = s;
-          }
-        }
-      }
-      if (current) chunks.push(current);
-      return chunks.length ? chunks : [text];
-    }
-
-    async function fetchSpeechAudio(text, lang) {
-      const chunks = splitIntoChunks(text);
-      const ctx = getAudioContext();
-      const decodedBuffers = [];
-
-      document.getElementById('preview-status').innerText = `Fetching clean neural voice (${chunks.length} parts)...`;
-
-      for (let i = 0; i < chunks.length; i++) {
-        const query = encodeURIComponent(chunks[i]);
-        const endpoint = `https://translate.google.com/translate_tts?ie=UTF-8&q=${query}&tl=${lang}&client=tw-ob`;
-        
-        const response = await fetch(endpoint);
-        if (!response.ok) throw new Error('Audio stream fetch failed');
-        const arrayBuf = await response.arrayBuffer();
-        const audioBuf = await ctx.decodeAudioData(arrayBuf);
-        decodedBuffers.push(audioBuf);
-      }
-
-      // Concatenate all chunks into a single clean AudioBuffer
-      const sampleRate = decodedBuffers[0].sampleRate;
-      const totalLen = decodedBuffers.reduce((sum, b) => sum + b.length, 0);
-      const finalBuffer = ctx.createBuffer(1, totalLen, sampleRate);
-      const outputData = finalBuffer.getChannelData(0);
-
-      let offset = 0;
-      for (let b of decodedBuffers) {
-        outputData.set(b.getChannelData(0), offset);
-        offset += b.length;
-      }
-
-      return finalBuffer;
-    }
-
-    async function getOrGenerateSpeechBuffer() {
+    document.getElementById('btn-preview-tts').onclick = () => {
       const text = ttsInput.value.trim();
       if (!text) {
-        alert('Please enter some dialogue text first.');
-        return null;
-      }
-
-      if (cachedAudioBuffer) {
-        return cachedAudioBuffer;
-      }
-
-      try {
-        const lang = voiceSelect.value;
-        const buffer = await fetchSpeechAudio(text, lang);
-        cachedAudioBuffer = buffer;
-
-        const rate = parseFloat(speedSelect.value);
-        const durationSec = buffer.duration / rate;
-        const mins = Math.floor(durationSec / 60);
-        const secs = Math.floor(durationSec % 60);
-        document.getElementById('duration-display').innerText = 
-          `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
-        document.getElementById('preview-status').innerText = 'Speech generated cleanly';
-
-        return cachedAudioBuffer;
-      } catch (err) {
-        console.error('Speech synthesis error:', err);
-        document.getElementById('preview-status').innerText = 'Network error fetching speech';
-        alert('Failed to synthesize speech audio. Please check your internet connection.');
-        return null;
-      }
-    }
-
-    /* ==========================================================================
-       PLAYBACK PREVIEW (Shares the exact same buffer with file downloads)
-       ========================================================================== */
-    document.getElementById('btn-preview-tts').onclick = async () => {
-      if (isPlaying) {
-        stopPreview();
+        alert('Please enter dialogue text first.');
         return;
       }
 
-      const buf = await getOrGenerateSpeechBuffer();
-      if (!buf) return;
+      if (isPlayingPreview) {
+        window.speechSynthesis.cancel();
+        stopPreviewUI();
+        return;
+      }
 
-      const ctx = getAudioContext();
-      activeSourceNode = ctx.createBufferSource();
-      activeSourceNode.buffer = buf;
-      activeSourceNode.playbackRate.value = parseFloat(speedSelect.value);
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      const selectedIndex = parseInt(voiceSelect.value, 10) || 0;
+      if (availableVoices[selectedIndex]) {
+        utterance.voice = availableVoices[selectedIndex];
+      }
 
-      activeSourceNode.connect(ctx.destination);
-      activeSourceNode.start(0);
+      const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
+      utterance.rate = rate;
+      utterance.pitch = pitch;
 
-      isPlaying = true;
-      document.getElementById('preview-icon').className = 'fa-solid fa-pause text-sm';
-      document.getElementById('preview-status').innerText = 'Playing speech audio...';
-
-      activeSourceNode.onended = () => {
-        stopPreview();
+      utterance.onstart = () => {
+        isPlayingPreview = true;
+        document.getElementById('preview-icon').className = 'fa-solid fa-pause text-sm';
+        previewStatus.innerText = 'Speaking preview...';
       };
+
+      utterance.onend = () => stopPreviewUI();
+      utterance.onerror = () => stopPreviewUI();
+
+      window.speechSynthesis.speak(utterance);
     };
 
-    function stopPreview() {
-      if (activeSourceNode) {
-        try { activeSourceNode.stop(); } catch (e) {}
-        activeSourceNode = null;
-      }
-      isPlaying = false;
+    function stopPreviewUI() {
+      isPlayingPreview = false;
       document.getElementById('preview-icon').className = 'fa-solid fa-play text-sm';
-      document.getElementById('preview-status').innerText = 'Ready to generate speech';
+      previewStatus.innerText = 'Ready to preview voice';
     }
 
     /* ==========================================================================
-       ACCURATE WAV & MP3 EXPORTERS (Studio 44.1kHz 16-Bit PCM)
+       TAB AUDIO CAPTURE PIPELINE (Loopback directly to 16-Bit WAV / MP3)
        ========================================================================== */
-    function renderResampledBuffer(srcBuffer, rate) {
-      if (rate === 1.0) return srcBuffer;
-
-      // Resample to apply speed multiplier cleanly without pitch glitching
-      const targetFrames = Math.round(srcBuffer.length / rate);
-      const ctx = getAudioContext();
-      const resampled = ctx.createBuffer(srcBuffer.numberOfChannels, targetFrames, srcBuffer.sampleRate);
-
-      for (let ch = 0; ch < srcBuffer.numberOfChannels; ch++) {
-        const inputData = srcBuffer.getChannelData(ch);
-        const outputData = resampled.getChannelData(ch);
-        for (let i = 0; i < targetFrames; i++) {
-          const srcIdx = i * rate;
-          const i0 = Math.floor(srcIdx);
-          const i1 = Math.min(i0 + 1, srcBuffer.length - 1);
-          const frac = srcIdx - i0;
-          outputData[i] = inputData[i0] * (1 - frac) + inputData[i1] * frac;
-        }
+    async function getTabAudioStream() {
+      if (captureStream && captureStream.active && captureStream.getAudioTracks().length > 0) {
+        return captureStream;
       }
-      return resampled;
+
+      try {
+        exportStatus.innerText = 'Please share this tab (with audio)...';
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        });
+
+        const audioTracks = stream.getAudioTracks();
+        if (audioTracks.length === 0) {
+          stream.getTracks().forEach(t => t.stop());
+          alert('No audio track detected! Make sure you check "Share tab audio" in the browser prompt.');
+          exportStatus.innerText = 'Audio permission missing';
+          return null;
+        }
+
+        // Hide video tracks so we only maintain the audio stream
+        stream.getVideoTracks().forEach(t => t.stop());
+        captureStream = stream;
+        return stream;
+      } catch (err) {
+        console.error('Screen capture error:', err);
+        exportStatus.innerText = 'Capture canceled';
+        return null;
+      }
     }
 
-    // 16-Bit PCM WAV Encoder
+    async function recordExactSpeechToBuffer() {
+      const text = ttsInput.value.trim();
+      if (!text) {
+        alert('Please enter dialogue text first.');
+        return null;
+      }
+
+      const stream = await getTabAudioStream();
+      if (!stream) return null;
+
+      exportStatus.innerText = 'Recording speech track...';
+      window.speechSynthesis.cancel();
+
+      return new Promise((resolve) => {
+        const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+        const recordedChunks = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          exportStatus.innerText = 'Processing captured audio...';
+          const webmBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+          const arrayBuffer = await webmBlob.arrayBuffer();
+          const ctx = getAudioContext();
+          const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+          resolve(decodedBuffer);
+        };
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        const selectedIndex = parseInt(voiceSelect.value, 10) || 0;
+        if (availableVoices[selectedIndex]) {
+          utterance.voice = availableVoices[selectedIndex];
+        }
+
+        const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
+        utterance.rate = rate;
+        utterance.pitch = pitch;
+
+        utterance.onstart = () => {
+          mediaRecorder.start(100);
+        };
+
+        utterance.onend = () => {
+          setTimeout(() => {
+            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+          }, 350); // Clean release tail
+        };
+
+        utterance.onerror = () => {
+          if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+        };
+
+        window.speechSynthesis.speak(utterance);
+      });
+    }
+
+    /* ==========================================================================
+       DIRECT ENCODERS (WAV 16-BIT PCM & MP3)
+       ========================================================================== */
     function audioBufferToWavBlob(buffer) {
       const numOfChan = buffer.numberOfChannels;
       const length = buffer.length * numOfChan * 2 + 44;
       const out = new DataView(new ArrayBuffer(length));
       let pos = 0;
 
-      const setUint16 = (data) => { out.setUint16(pos, data, true); pos += 2; };
-      const setUint32 = (data) => { out.setUint32(pos, data, true); pos += 4; };
+      const setUint16 = (d) => { out.setUint16(pos, d, true); pos += 2; };
+      const setUint32 = (d) => { out.setUint32(pos, d, true); pos += 4; };
 
       setUint32(0x46464952); // "RIFF"
       setUint32(length - 8);
       setUint32(0x45564157); // "WAVE"
       setUint32(0x20746d66); // "fmt "
-      setUint32(16);          // 16 bytes Subchunk1
-      setUint16(1);           // PCM
+      setUint32(16);          // Subchunk1Size
+      setUint16(1);           // PCM format
       setUint16(numOfChan);
       setUint32(buffer.sampleRate);
       setUint32(buffer.sampleRate * 2 * numOfChan);
@@ -353,7 +350,6 @@
       return new Blob([out.buffer], { type: 'audio/wav' });
     }
 
-    // MP3 LameJS Encoder
     function audioBufferToMp3Blob(buffer) {
       const channels = buffer.numberOfChannels;
       const sampleRate = buffer.sampleRate;
@@ -401,31 +397,23 @@
     }
 
     document.getElementById('btn-download-wav').onclick = async () => {
-      document.getElementById('export-status').innerText = 'Preparing WAV...';
-      const buf = await getOrGenerateSpeechBuffer();
+      const buf = await recordExactSpeechToBuffer();
       if (!buf) return;
 
-      const rate = parseFloat(speedSelect.value);
-      const readyBuffer = renderResampledBuffer(buf, rate);
-      const blob = audioBufferToWavBlob(readyBuffer);
-
-      triggerDownload(blob, `speech_${Date.now()}.wav`);
-      document.getElementById('export-status').innerText = 'Downloaded WAV!';
-      setTimeout(() => { document.getElementById('export-status').innerText = ''; }, 3000);
+      const blob = audioBufferToWavBlob(buf);
+      triggerDownload(blob, `speech_natural_${Date.now()}.wav`);
+      exportStatus.innerText = 'Downloaded clean WAV!';
+      setTimeout(() => { exportStatus.innerText = ''; }, 3000);
     };
 
     document.getElementById('btn-download-mp3').onclick = async () => {
-      document.getElementById('export-status').innerText = 'Encoding MP3...';
-      const buf = await getOrGenerateSpeechBuffer();
+      const buf = await recordExactSpeechToBuffer();
       if (!buf) return;
 
-      const rate = parseFloat(speedSelect.value);
-      const readyBuffer = renderResampledBuffer(buf, rate);
-      const blob = audioBufferToMp3Blob(readyBuffer);
-
-      triggerDownload(blob, `speech_${Date.now()}.mp3`);
-      document.getElementById('export-status').innerText = 'Downloaded MP3!';
-      setTimeout(() => { document.getElementById('export-status').innerText = ''; }, 3000);
+      const blob = audioBufferToMp3Blob(buf);
+      triggerDownload(blob, `speech_natural_${Date.now()}.mp3`);
+      exportStatus.innerText = 'Downloaded clean MP3!';
+      setTimeout(() => { exportStatus.innerText = ''; }, 3000);
     };
 
     /* ==========================================================================
@@ -448,9 +436,7 @@
             isDictating = true;
             sttLabel.innerText = 'Listening...';
             btnStt.classList.add('bg-rose-950', 'text-rose-300', 'border-rose-700');
-          } catch (e) {
-            console.error(e);
-          }
+          } catch (e) { console.error(e); }
         } else {
           recognition.stop();
           isDictating = false;
