@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- LameJS MP3 Encoder CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
-  <!-- FontAwesome Icons -->
+  <!-- FontAwesome 6 Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
     tailwind.config = {
@@ -31,29 +31,28 @@
     ::-webkit-scrollbar-track { background: #07090f; }
     ::-webkit-scrollbar-thumb { background: #252b3d; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #3c4664; }
-    .timeline-canvas-grid {
+    .timeline-grid {
       background-size: 50px 100%;
       background-image: linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
     }
-    .timeline-clip-item {
+    .clip-block {
       user-select: none;
       touch-action: none;
-      transition: box-shadow 0.15s ease;
+      transition: box-shadow 0.15s ease, transform 0.05s ease;
     }
-    .timeline-clip-item:hover {
-      box-shadow: 0 0 14px rgba(99, 102, 241, 0.6);
+    .clip-block:hover {
+      box-shadow: 0 0 14px rgba(99, 102, 241, 0.5);
     }
-    .timeline-drop-target {
-      background-color: rgba(99, 102, 241, 0.14) !important;
-      outline: 2px dashed rgba(129, 140, 248, 0.8) !important;
+    .lane-hover-target {
+      background-color: rgba(99, 102, 241, 0.12) !important;
+      outline: 2px dashed rgba(129, 140, 248, 0.75) !important;
     }
   </style>
 </head>
 <body class="bg-panel-950 text-slate-100 min-h-screen flex flex-col font-sans select-none overflow-x-hidden">
 
-  <!-- TOP HEADER & TRANSPORT BAR -->
   <header class="bg-panel-900 border-b border-slate-800 px-3 py-2 flex flex-wrap items-center justify-between gap-3 z-30 sticky top-0 shadow-lg">
-    <!-- Brand -->
+    <!-- Brand Title -->
     <div class="flex items-center space-x-3">
       <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/25">
         <i class="fa-solid fa-wave-square text-white text-base"></i>
@@ -61,7 +60,7 @@
       <div>
         <div class="flex items-center gap-2">
           <h1 class="text-sm md:text-base font-bold bg-gradient-to-r from-white via-indigo-200 to-cyan-300 bg-clip-text text-transparent">SonicForge DAW</h1>
-          <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">Studio v2</span>
+          <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">Studio Pro</span>
         </div>
         <p class="text-[11px] text-slate-400">4-Track Multi-Clip Audio & Speech Workstation</p>
       </div>
@@ -72,7 +71,7 @@
       <button id="btn-jump-start" title="Jump to 0:00 (Home)" class="w-7 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-xs">
         <i class="fa-solid fa-backward-step"></i>
       </button>
-      <button id="btn-step-back-5" title="Rewind 5s (Shift + Left)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
+      <button id="btn-step-back-5" title="Rewind 5s (Shift + Left Arrow)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
         <i class="fa-solid fa-angles-left mr-0.5 text-[9px]"></i>5s
       </button>
       <button id="btn-step-back-1" title="Rewind 1s (Left Arrow)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
@@ -87,23 +86,23 @@
       <button id="btn-step-fwd-1" title="Forward 1s (Right Arrow)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
         1s<i class="fa-solid fa-chevron-right ml-0.5 text-[9px]"></i>
       </button>
-      <button id="btn-step-fwd-5" title="Forward 5s (Shift + Right)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
+      <button id="btn-step-fwd-5" title="Forward 5s (Shift + Right Arrow)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
         5s<i class="fa-solid fa-angles-right ml-0.5 text-[9px]"></i>
       </button>
-      <button id="btn-jump-end" title="Jump to End (End)" class="w-7 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-xs">
+      <button id="btn-jump-end" title="Jump to End of Clips (End)" class="w-7 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-xs">
         <i class="fa-solid fa-forward-step"></i>
       </button>
 
       <div class="h-5 w-px bg-slate-700 mx-1"></div>
 
-      <!-- Timecode -->
+      <!-- Timecode Readout -->
       <div class="flex items-baseline space-x-1 font-mono text-cyan-400 bg-panel-950 px-2.5 py-1 rounded-lg border border-slate-800">
         <span id="timecode-display" class="text-xs font-semibold tracking-wider">00:00.00</span>
         <span class="text-[9px] text-slate-500">/ 03:00.00</span>
       </div>
     </div>
 
-    <!-- Export WAV & MP3 -->
+    <!-- Export WAV & MP3 Buttons -->
     <div class="flex items-center space-x-2">
       <div class="flex rounded-xl shadow-lg shadow-indigo-500/10 overflow-hidden border border-slate-700">
         <button id="btn-export-wav" class="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white text-xs font-semibold transition active:scale-95">
@@ -121,7 +120,6 @@
     </div>
   </header>
 
-  <!-- MAIN WORKSPACE -->
   <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
     
     <!-- LEFT SIDEBAR: Tasks & Projects Manager -->
@@ -251,7 +249,7 @@
           </div>
 
           <!-- Track Lanes Area -->
-          <div id="tracks-lanes-wrapper" class="relative timeline-canvas-grid">
+          <div id="tracks-lanes-wrapper" class="relative timeline-grid">
             <div id="lane-0" data-track-index="0" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01]">
               <span class="absolute right-4 text-xs font-mono text-slate-800 pointer-events-none uppercase font-bold tracking-wider">Track 1 &bull; Speech & Dialogue</span>
             </div>
@@ -296,10 +294,10 @@
             <div class="flex items-center justify-between mb-1">
               <label class="text-xs font-bold text-slate-300 uppercase tracking-wider">Voice Script</label>
               <span class="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
-                <i class="fa-solid fa-circle-check"></i> Natural Human Speech
+                <i class="fa-solid fa-shield-halved"></i> Clean Anti-Click Audio
               </span>
             </div>
-            <textarea id="tts-input" rows="3" class="w-full bg-panel-850 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 leading-relaxed" placeholder="Type text here to synthesize natural speech...">Warning! Engine core temperature exceeding normal parameters. Initiating emergency coolant sequence.</textarea>
+            <textarea id="tts-input" rows="3" class="w-full bg-panel-850 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 leading-relaxed" placeholder="Type text here to synthesize natural speech...">SonicForge audio workstation ready. All tracks calibrated.</textarea>
           </div>
 
           <div class="space-y-3 bg-panel-850 p-3 rounded-xl border border-slate-800/80">
@@ -310,31 +308,31 @@
               </span>
             </div>
 
-            <!-- Voice preset buttons -->
+            <!-- Voice Preset Buttons -->
             <div class="grid grid-cols-2 gap-2 text-xs">
               <button onclick="applyVoicePreset('male-low')" id="preset-btn-male-low" class="voice-preset-btn p-2 rounded-lg bg-panel-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
                 <div class="font-bold text-slate-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-indigo-400 text-[10px]"></i> Brian
+                  <i class="fa-solid fa-user text-indigo-400 text-[10px]"></i> Deep Male
                 </div>
-                <div class="text-[10px] text-slate-400">Deep Male Voice</div>
+                <div class="text-[10px] text-slate-400">Brian Voice</div>
               </button>
               <button onclick="applyVoicePreset('male-med')" id="preset-btn-male-med" class="voice-preset-btn p-2 rounded-lg bg-indigo-600/30 text-left border border-indigo-500/60 transition">
                 <div class="font-bold text-indigo-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-cyan-400 text-[10px]"></i> Russell
+                  <i class="fa-solid fa-user text-cyan-400 text-[10px]"></i> Med Male
                 </div>
-                <div class="text-[10px] text-slate-300">Medium Clear Male</div>
+                <div class="text-[10px] text-slate-300">Russell Voice</div>
               </button>
               <button onclick="applyVoicePreset('female-med')" id="preset-btn-female-med" class="voice-preset-btn p-2 rounded-lg bg-panel-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
                 <div class="font-bold text-slate-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-emerald-400 text-[10px]"></i> Amy
+                  <i class="fa-solid fa-user text-emerald-400 text-[10px]"></i> Med Female
                 </div>
-                <div class="text-[10px] text-slate-400">Natural Female</div>
+                <div class="text-[10px] text-slate-400">Amy Voice</div>
               </button>
               <button onclick="applyVoicePreset('female-high')" id="preset-btn-female-high" class="voice-preset-btn p-2 rounded-lg bg-panel-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
                 <div class="font-bold text-slate-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-rose-400 text-[10px]"></i> Salli
+                  <i class="fa-solid fa-user text-rose-400 text-[10px]"></i> High Female
                 </div>
-                <div class="text-[10px] text-slate-400">Crisp High Female</div>
+                <div class="text-[10px] text-slate-400">Salli Voice</div>
               </button>
             </div>
 
@@ -401,7 +399,7 @@
             <span class="text-[10px] text-slate-500">Drag card or pick track</span>
           </div>
 
-          <!-- Category filter buttons -->
+          <!-- Category Filter Buttons -->
           <div class="flex gap-1.5">
             <button onclick="filterLibraryCategory('all')" id="cat-btn-all" class="px-2.5 py-1 text-[11px] rounded-lg bg-indigo-600 text-white font-medium">All</button>
             <button onclick="filterLibraryCategory('sfx')" id="cat-btn-sfx" class="px-2.5 py-1 text-[11px] rounded-lg bg-panel-850 text-slate-400 hover:text-white">SFX</button>
@@ -546,7 +544,6 @@
     <span id="toast-message">Notification</span>
   </div>
 
-  <!-- JAVASCRIPT ENGINE & ARCHITECTURE -->
   <script>
     const MAX_DURATION_SEC = 180; // 3 minutes timeline maximum
     const PIXELS_PER_SECOND_BASE = 14;
@@ -563,7 +560,7 @@
       return audioCtx;
     }
 
-    const STORAGE_KEY = 'sonicforge_daw_tasks_v5';
+    const STORAGE_KEY = 'sonicforge_daw_tasks_v6';
 
     let state = {
       tasks: [],
@@ -582,7 +579,7 @@
       { volume: 0.8, muted: false, solo: false }  // Track 4: Ambience
     ];
 
-    // In-memory registry for decoded audio buffers (TTS speech, microphone clips, procedural sounds)
+    // In-memory registry for master audio buffers (speech, recordings, algorithmic sounds)
     window.clipBufferRegistry = {};
     const ttsAudioBufferCache = new Map();
 
@@ -816,7 +813,7 @@
       }
     }
 
-    // Decodes audio arraybuffers cleanly into Web Audio API AudioBuffers
+    // Helper to decode array buffers
     function decodeAudioDataPromise(ctx, arrayBuffer) {
       return new Promise((resolve, reject) => {
         ctx.decodeAudioData(arrayBuffer.slice(0), (decoded) => {
@@ -827,8 +824,47 @@
       });
     }
 
+    // High-pass filter & smooth cosine envelope applied to every buffer to eradicate dull thuds, pops, and DC offset
+    function sanitizeAudioBuffer(ctx, rawBuffer) {
+      const numChannels = rawBuffer.numberOfChannels;
+      const length = rawBuffer.length;
+      const sampleRate = rawBuffer.sampleRate;
+      const cleanBuffer = ctx.createBuffer(numChannels, length, sampleRate);
+
+      const fadeDuration = 0.02; // 20ms anti-pop ramp
+      const fadeSamples = Math.min(Math.floor(sampleRate * fadeDuration), Math.floor(length / 2));
+
+      for (let ch = 0; ch < numChannels; ch++) {
+        const input = rawBuffer.getChannelData(ch);
+        const output = cleanBuffer.getChannelData(ch);
+
+        // Simple high-pass DC-offset blocker (R=0.995)
+        let lastIn = 0;
+        let lastOut = 0;
+        const R = 0.995;
+
+        for (let i = 0; i < length; i++) {
+          const currentIn = input[i];
+          lastOut = currentIn - lastIn + R * lastOut;
+          lastIn = currentIn;
+          output[i] = lastOut;
+        }
+
+        // Apply smooth raised-cosine fade-in & fade-out to ensure 0.0 amplitude at boundaries
+        for (let i = 0; i < fadeSamples; i++) {
+          const fadeInMultiplier = 0.5 * (1 - Math.cos((Math.PI * i) / fadeSamples));
+          output[i] *= fadeInMultiplier;
+
+          const outIdx = length - 1 - i;
+          const fadeOutMultiplier = 0.5 * (1 - Math.cos((Math.PI * i) / fadeSamples));
+          output[outIdx] *= fadeOutMultiplier;
+        }
+      }
+      return cleanBuffer;
+    }
+
     // High quality natural human voice synthesis pipeline
-    // Uses real human vocal voice stream APIs with open CORS and local MediaStream speech synthesis fallback
+    // Fetches genuine neural audio MP3 streams with open CORS, applies anti-click filter, with instant browser SpeechSynthesis fallback
     async function fetchNaturalSpeechBuffer(ctx, text, voiceName, rate = 1.0, pitch = 1.0) {
       const cleanText = text.trim();
       const voice = voiceName || 'Russell';
@@ -838,46 +874,48 @@
         return ttsAudioBufferCache.get(cacheKey);
       }
 
-      // Route 1: StreamElements Cloud Human Audio Voice Endpoint (Open CORS, pristine natural speech MP3)
+      // StreamElements Cloud Voice Endpoint (Pristine neural human MP3 voice)
       try {
         const primaryUrl = `https://api.streamelements.com/kappa/v2/speech?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(cleanText)}`;
         const response = await fetch(primaryUrl);
         if (response.ok) {
           const arrayBuffer = await response.arrayBuffer();
-          const decoded = await decodeAudioDataPromise(ctx, arrayBuffer);
-          ttsAudioBufferCache.set(cacheKey, decoded);
-          return decoded;
+          const rawBuffer = await decodeAudioDataPromise(ctx, arrayBuffer);
+          const sanitized = sanitizeAudioBuffer(ctx, rawBuffer);
+          ttsAudioBufferCache.set(cacheKey, sanitized);
+          return sanitized;
         }
       } catch (e) {
         console.warn('Primary speech stream endpoint skipped, trying secondary...', e);
       }
 
-      // Route 2: Google TTS Audio Endpoint
+      // Secondary Google TTS Audio Endpoint
       try {
         const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(cleanText)}`;
         const response = await fetch(fallbackUrl);
         if (response.ok) {
           const arrayBuffer = await response.arrayBuffer();
-          const decoded = await decodeAudioDataPromise(ctx, arrayBuffer);
-          ttsAudioBufferCache.set(cacheKey, decoded);
-          return decoded;
+          const rawBuffer = await decodeAudioDataPromise(ctx, arrayBuffer);
+          const sanitized = sanitizeAudioBuffer(ctx, rawBuffer);
+          ttsAudioBufferCache.set(cacheKey, sanitized);
+          return sanitized;
         }
       } catch (e) {
         console.warn('Secondary speech endpoint unavailable, using native browser speech synthesis audio...', e);
       }
 
-      // Route 3: Native Web Speech API Real-Time Speech Synthesis
+      // Native SpeechSynthesis recording fallback with sanitized buffer output
       const nativeBuffer = await generateNativeSpeechBuffer(ctx, cleanText, voice, rate, pitch);
-      ttsAudioBufferCache.set(cacheKey, nativeBuffer);
-      return nativeBuffer;
+      const cleanNativeBuffer = sanitizeAudioBuffer(ctx, nativeBuffer);
+      ttsAudioBufferCache.set(cacheKey, cleanNativeBuffer);
+      return cleanNativeBuffer;
     }
 
     // Native Speech Synthesis utterance runner
     function generateNativeSpeechBuffer(ctx, text, voiceName, rate, pitch) {
       return new Promise((resolve) => {
         if (!('speechSynthesis' in window)) {
-          // Absolute fallback: synthesized voice simulation
-          resolve(generateAcousticVoiceBuffer(ctx, text, voiceName));
+          resolve(generatePureVoiceBuffer(ctx, text, voiceName));
           return;
         }
 
@@ -902,37 +940,37 @@
 
         utterance.onend = () => {
           const elapsed = (Date.now() - startTime) / 1000 || estimatedSeconds;
-          const buffer = generateAcousticVoiceBuffer(ctx, text, voiceName, elapsed);
+          const buffer = generatePureVoiceBuffer(ctx, text, voiceName, elapsed);
           resolve(buffer);
         };
 
         utterance.onerror = () => {
-          const buffer = generateAcousticVoiceBuffer(ctx, text, voiceName, estimatedSeconds);
+          const buffer = generatePureVoiceBuffer(ctx, text, voiceName, estimatedSeconds);
           resolve(buffer);
         };
 
         window.speechSynthesis.speak(utterance);
 
-        // Safety fallback timer if browser cancels speech silently
+        // Safety fallback timer if browser speech cancels silently
         setTimeout(() => {
           if (!startTime) {
             window.speechSynthesis.cancel();
-            resolve(generateAcousticVoiceBuffer(ctx, text, voiceName, estimatedSeconds));
+            resolve(generatePureVoiceBuffer(ctx, text, voiceName, estimatedSeconds));
           }
         }, (estimatedSeconds + 1.5) * 1000);
       });
     }
 
-    // Acoustic vocal tract formant synthesis for guaranteed audible words
-    function generateAcousticVoiceBuffer(ctx, text, voice, forcedDuration) {
+    // Clean, anti-click harmonic voice buffer without dull thuds or clicks
+    function generatePureVoiceBuffer(ctx, text, voice, forcedDuration) {
       const sampleRate = ctx.sampleRate;
       const words = text.split(/\s+/).filter(Boolean);
       const duration = forcedDuration || Math.max(1.2, words.length * 0.42 + 0.3);
       const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
       const d = buffer.getChannelData(0);
 
-      const baseF0 = (voice === 'Brian' || voice === 'Geraint') ? 115 : (voice === 'Amy' || voice === 'Salli') ? 220 : 150;
-      let pos = Math.floor(sampleRate * 0.08);
+      const baseF0 = (voice === 'Brian' || voice === 'Geraint') ? 115 : (voice === 'Amy' || voice === 'Salli') ? 210 : 150;
+      let pos = Math.floor(sampleRate * 0.05);
 
       words.forEach((word) => {
         const wordSamples = Math.floor(sampleRate * 0.32);
@@ -940,19 +978,18 @@
           const idx = pos + i;
           if (idx >= d.length) break;
           const t = i / sampleRate;
-          const f0 = baseF0 + Math.sin(t * 12) * 5;
-          // Formant harmonics for realistic speech
-          const h1 = Math.sin(2 * Math.PI * f0 * t) * 0.45;
-          const h2 = Math.sin(2 * Math.PI * (f0 * 2) * t) * 0.28;
-          const h3 = Math.sin(2 * Math.PI * (f0 * 3) * t) * 0.16;
-          const h4 = Math.sin(2 * Math.PI * (f0 * 4) * t) * 0.08;
+          const f0 = baseF0 + Math.sin(t * 10) * 4;
+          // Smooth sine harmonics - zero square clicks
+          const h1 = Math.sin(2 * Math.PI * f0 * t) * 0.42;
+          const h2 = Math.sin(2 * Math.PI * (f0 * 2) * t) * 0.24;
+          const h3 = Math.sin(2 * Math.PI * (f0 * 3) * t) * 0.12;
           const env = Math.sin((i / wordSamples) * Math.PI);
-          d[idx] += (h1 + h2 + h3 + h4) * env * 0.7;
+          d[idx] += (h1 + h2 + h3) * env * 0.65;
         }
-        pos += wordSamples + Math.floor(sampleRate * 0.08);
+        pos += wordSamples + Math.floor(sampleRate * 0.06);
       });
 
-      return buffer;
+      return sanitizeAudioBuffer(ctx, buffer);
     }
 
     let currentVoicePreset = 'male-med';
@@ -1006,7 +1043,14 @@
         const buffer = await fetchNaturalSpeechBuffer(ctx, text, voice, rate, pitch);
         const src = ctx.createBufferSource();
         src.buffer = buffer;
-        src.connect(ctx.destination);
+
+        // Smooth output gain node to prevent click on start/stop
+        const previewGain = ctx.createGain();
+        previewGain.gain.setValueAtTime(0.001, ctx.currentTime);
+        previewGain.gain.exponentialRampToValueAtTime(1.0, ctx.currentTime + 0.02);
+
+        src.connect(previewGain);
+        previewGain.connect(ctx.destination);
         src.start();
         showToast(`Playing speech (${voice})`, 'info');
       } catch (err) {
@@ -1056,7 +1100,7 @@
         cur.tracks[targetTrack].push(newClip);
         saveToStorage();
         renderTimelineClips();
-        showToast(`Added speech clip to Track ${targetTrack + 1}!`, 'success');
+        showToast(`Added clean speech clip to Track ${targetTrack + 1}!`, 'success');
       } catch (err) {
         console.error(err);
         showToast('Failed to add speech clip', 'warning');
@@ -1077,7 +1121,7 @@
         icon: 'fa-crosshairs',
         synth: (ctx) => {
           const sampleRate = ctx.sampleRate;
-          const length = sampleRate * 0.35;
+          const length = Math.floor(sampleRate * 0.35);
           const buffer = ctx.createBuffer(1, length, sampleRate);
           const data = buffer.getChannelData(0);
           for (let i = 0; i < length; i++) {
@@ -1086,7 +1130,7 @@
             const env = Math.exp(-t * 10);
             data[i] = Math.sin(2 * Math.PI * freq * t) * env;
           }
-          return buffer;
+          return sanitizeAudioBuffer(ctx, buffer);
         }
       },
       {
@@ -1099,7 +1143,7 @@
         icon: 'fa-bomb',
         synth: (ctx) => {
           const sampleRate = ctx.sampleRate;
-          const length = sampleRate * 1.8;
+          const length = Math.floor(sampleRate * 1.8);
           const buffer = ctx.createBuffer(1, length, sampleRate);
           const data = buffer.getChannelData(0);
           let lastOut = 0;
@@ -1110,9 +1154,9 @@
             lastOut = brown;
             const sub = Math.sin(2 * Math.PI * (75 * Math.exp(-t * 2.5)) * t) * 0.6;
             const env = Math.exp(-t * 2.2);
-            data[i] = (brown * 3.5 + sub) * env;
+            data[i] = (brown * 3.0 + sub) * env;
           }
-          return buffer;
+          return sanitizeAudioBuffer(ctx, buffer);
         }
       },
       {
@@ -1125,18 +1169,18 @@
         icon: 'fa-coins',
         synth: (ctx) => {
           const sampleRate = ctx.sampleRate;
-          const length = sampleRate * 0.45;
+          const length = Math.floor(sampleRate * 0.45);
           const buffer = ctx.createBuffer(1, length, sampleRate);
           const data = buffer.getChannelData(0);
           const split = Math.floor(sampleRate * 0.12);
           for (let i = 0; i < length; i++) {
             const t = i / sampleRate;
             const freq = i < split ? 987.77 : 1318.51;
-            const wave = Math.sin(2 * Math.PI * freq * t) > 0 ? 0.35 : -0.35;
+            const wave = Math.sin(2 * Math.PI * freq * t);
             const env = Math.exp(-t * 8);
-            data[i] = wave * env;
+            data[i] = wave * env * 0.5;
           }
-          return buffer;
+          return sanitizeAudioBuffer(ctx, buffer);
         }
       },
       {
@@ -1149,15 +1193,15 @@
         icon: 'fa-wind',
         synth: (ctx) => {
           const sampleRate = ctx.sampleRate;
-          const length = sampleRate * 0.8;
+          const length = Math.floor(sampleRate * 0.8);
           const buffer = ctx.createBuffer(1, length, sampleRate);
           const data = buffer.getChannelData(0);
           for (let i = 0; i < length; i++) {
             const t = i / sampleRate;
             const env = Math.sin(Math.PI * (t / 0.8));
-            data[i] = (Math.random() * 2 - 1) * env * 0.5;
+            data[i] = (Math.random() * 2 - 1) * env * 0.45;
           }
-          return buffer;
+          return sanitizeAudioBuffer(ctx, buffer);
         }
       },
 
@@ -1172,7 +1216,7 @@
         icon: 'fa-shoe-prints',
         synth: (ctx) => {
           const sampleRate = ctx.sampleRate;
-          const length = sampleRate * 2.2;
+          const length = Math.floor(sampleRate * 2.2);
           const buffer = ctx.createBuffer(1, length, sampleRate);
           const data = buffer.getChannelData(0);
           const steps = [0.1, 0.6, 1.1, 1.6];
@@ -1184,13 +1228,13 @@
               if (idx < length) {
                 const t = i / sampleRate;
                 const env = Math.sin((t / 0.18) * Math.PI) * Math.exp(-t * 15);
-                const noise = (Math.random() * 2 - 1) * 0.7;
-                const thud = Math.sin(2 * Math.PI * 90 * t) * 0.5;
+                const noise = (Math.random() * 2 - 1) * 0.6;
+                const thud = Math.sin(2 * Math.PI * 90 * t) * 0.4;
                 data[idx] += (noise + thud) * env;
               }
             }
           });
-          return buffer;
+          return sanitizeAudioBuffer(ctx, buffer);
         }
       },
       {
@@ -1203,16 +1247,16 @@
         icon: 'fa-door-open',
         synth: (ctx) => {
           const sampleRate = ctx.sampleRate;
-          const length = sampleRate * 1.4;
+          const length = Math.floor(sampleRate * 1.4);
           const buffer = ctx.createBuffer(1, length, sampleRate);
           const data = buffer.getChannelData(0);
           for (let i = 0; i < length; i++) {
             const t = i / sampleRate;
-            const f = 200 + Math.sin(t * 35) * 60 + Math.random() * 40;
+            const f = 200 + Math.sin(t * 35) * 60 + Math.random() * 30;
             const env = Math.sin((t / 1.4) * Math.PI);
-            data[i] = Math.sin(2 * Math.PI * f * t) * env * 0.45;
+            data[i] = Math.sin(2 * Math.PI * f * t) * env * 0.4;
           }
-          return buffer;
+          return sanitizeAudioBuffer(ctx, buffer);
         }
       },
       {
@@ -1225,7 +1269,7 @@
         icon: 'fa-hand-back-fist',
         synth: (ctx) => {
           const sampleRate = ctx.sampleRate;
-          const length = sampleRate * 0.5;
+          const length = Math.floor(sampleRate * 0.5);
           const buffer = ctx.createBuffer(1, length, sampleRate);
           const data = buffer.getChannelData(0);
           for (let i = 0; i < length; i++) {
@@ -1233,9 +1277,9 @@
             const f = 160 * Math.exp(-t * 20);
             const noise = (Math.random() * 2 - 1) * Math.exp(-t * 25);
             const sub = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 12);
-            data[i] = (noise * 0.6 + sub * 0.9);
+            data[i] = (noise * 0.5 + sub * 0.8);
           }
-          return buffer;
+          return sanitizeAudioBuffer(ctx, buffer);
         }
       },
 
@@ -1250,7 +1294,7 @@
         icon: 'fa-cloud-showers-heavy',
         synth: (ctx) => {
           const sampleRate = ctx.sampleRate;
-          const length = sampleRate * 6.0;
+          const length = Math.floor(sampleRate * 6.0);
           const buffer = ctx.createBuffer(1, length, sampleRate);
           const data = buffer.getChannelData(0);
           let b0 = 0, b1 = 0, b2 = 0;
@@ -1260,9 +1304,9 @@
             b1 = 0.96 * b1 + white * 0.15;
             b2 = 0.85 * b2 + white * 0.25;
             const env = Math.min(1, Math.min(i / (sampleRate * 0.5), (length - i) / (sampleRate * 0.5)));
-            data[i] = (b0 + b1 + b2) * 0.28 * env;
+            data[i] = (b0 + b1 + b2) * 0.25 * env;
           }
-          return buffer;
+          return sanitizeAudioBuffer(ctx, buffer);
         }
       },
       {
@@ -1275,7 +1319,7 @@
         icon: 'fa-satellite-dish',
         synth: (ctx) => {
           const sampleRate = ctx.sampleRate;
-          const length = sampleRate * 6.0;
+          const length = Math.floor(sampleRate * 6.0);
           const buffer = ctx.createBuffer(1, length, sampleRate);
           const data = buffer.getChannelData(0);
           for (let i = 0; i < length; i++) {
@@ -1285,9 +1329,9 @@
             const o3 = Math.sin(2 * Math.PI * 165.2 * t);
             const lfo = 0.8 + 0.2 * Math.sin(2 * Math.PI * 0.25 * t);
             const env = Math.min(1, Math.min(t / 0.5, (6.0 - t) / 0.5));
-            data[i] = (o1 * 0.4 + o2 * 0.25 + o3 * 0.15) * lfo * env;
+            data[i] = (o1 * 0.35 + o2 * 0.22 + o3 * 0.12) * lfo * env;
           }
-          return buffer;
+          return sanitizeAudioBuffer(ctx, buffer);
         }
       },
       {
@@ -1300,7 +1344,7 @@
         icon: 'fa-wind',
         synth: (ctx) => {
           const sampleRate = ctx.sampleRate;
-          const length = sampleRate * 5.5;
+          const length = Math.floor(sampleRate * 5.5);
           const buffer = ctx.createBuffer(1, length, sampleRate);
           const data = buffer.getChannelData(0);
           let val = 0;
@@ -1310,9 +1354,9 @@
             val = val * 0.95 + white * 0.05;
             const mod = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.4 * t);
             const env = Math.min(1, Math.min(t / 0.4, (5.5 - t) / 0.4));
-            data[i] = val * 2.8 * mod * env;
+            data[i] = val * 2.5 * mod * env;
           }
-          return buffer;
+          return sanitizeAudioBuffer(ctx, buffer);
         }
       }
     ];
@@ -1509,8 +1553,8 @@
           const white = Math.random() * 2 - 1;
           b0 = 0.97 * b0 + white * 0.1 * toneFactor;
           b1 = 0.92 * b1 + white * 0.15;
-          const crackle = (type === 'vinyl' && Math.random() < 0.002) ? (Math.random() * 2 - 1) * 0.8 : 0;
-          data[i] = (b0 + b1 * 0.4 + crackle) * 0.35;
+          const crackle = (type === 'vinyl' && Math.random() < 0.002) ? (Math.random() * 2 - 1) * 0.7 : 0;
+          data[i] = (b0 + b1 * 0.4 + crackle) * 0.3;
         }
       } else if (type === 'wind') {
         let val = 0;
@@ -1519,17 +1563,17 @@
           const white = Math.random() * 2 - 1;
           val = val * (0.9 + 0.08 * toneFactor) + white * 0.04;
           const lfo = 0.4 + 0.6 * Math.sin(2 * Math.PI * 0.35 * t);
-          data[i] = val * 3.0 * lfo;
+          data[i] = val * 2.8 * lfo;
         }
       } else if (type === 'drone') {
         const base = 45 + toneFactor * 65;
         for (let i = 0; i < length; i++) {
           const t = i / sampleRate;
           data[i] = (
-            Math.sin(2 * Math.PI * base * t) * 0.4 +
-            Math.sin(2 * Math.PI * (base * 2.01) * t) * 0.25 +
-            Math.sin(2 * Math.PI * (base * 3.02) * t) * 0.15
-          ) * 0.6;
+            Math.sin(2 * Math.PI * base * t) * 0.35 +
+            Math.sin(2 * Math.PI * (base * 2.01) * t) * 0.2 +
+            Math.sin(2 * Math.PI * (base * 3.02) * t) * 0.12
+          ) * 0.55;
         }
       } else {
         // Steps cadence
@@ -1540,12 +1584,12 @@
             const idx = startSample + i;
             if (idx < length) {
               const t = i / sampleRate;
-              data[idx] += (Math.random() * 2 - 1) * Math.sin((t / 0.12) * Math.PI) * 0.5;
+              data[idx] += (Math.random() * 2 - 1) * Math.sin((t / 0.12) * Math.PI) * 0.45;
             }
           }
         }
       }
-      return buffer;
+      return sanitizeAudioBuffer(ctx, buffer);
     }
 
     function setupLaneDropZones() {
@@ -1555,16 +1599,16 @@
 
         lane.addEventListener('dragover', (e) => {
           e.preventDefault();
-          lane.classList.add('timeline-drop-target');
+          lane.classList.add('lane-hover-target');
         });
 
         lane.addEventListener('dragleave', () => {
-          lane.classList.remove('timeline-drop-target');
+          lane.classList.remove('lane-hover-target');
         });
 
         lane.addEventListener('drop', (e) => {
           e.preventDefault();
-          lane.classList.remove('timeline-drop-target');
+          lane.classList.remove('lane-hover-target');
           const dataStr = e.dataTransfer.getData('text/plain');
           if (!dataStr) return;
 
@@ -1637,7 +1681,7 @@
         const lane = document.getElementById(`lane-${i}`);
         if (!lane) continue;
 
-        const existingClips = lane.querySelectorAll('.timeline-clip-item');
+        const existingClips = lane.querySelectorAll('.clip-block');
         existingClips.forEach(el => el.remove());
 
         if (!cur) continue;
@@ -1645,7 +1689,7 @@
         const clips = cur.tracks[i] || [];
         clips.forEach((clip) => {
           const clipEl = document.createElement('div');
-          clipEl.className = `timeline-clip-item absolute h-16 rounded-xl flex items-center justify-between px-3 text-xs font-semibold cursor-move border shadow-lg ${
+          clipEl.className = `clip-block absolute h-16 rounded-xl flex items-center justify-between px-3 text-xs font-semibold cursor-move border shadow-lg ${
             i === 0 ? 'bg-gradient-to-r from-cyan-950/80 to-cyan-900/90 border-cyan-500/70 text-cyan-200' :
             i === 1 ? 'bg-gradient-to-r from-violet-950/80 to-indigo-900/90 border-violet-500/70 text-violet-200' :
             i === 2 ? 'bg-gradient-to-r from-emerald-950/80 to-teal-900/90 border-emerald-500/70 text-emerald-200' :
@@ -1726,7 +1770,6 @@
       }
     }
 
-    // Transport buttons bindings
     document.getElementById('btn-jump-start').addEventListener('click', () => seekTo(0));
     document.getElementById('btn-step-back-5').addEventListener('click', () => seekTo(state.currentTime - 5));
     document.getElementById('btn-step-back-1').addEventListener('click', () => seekTo(state.currentTime - 1));
@@ -1742,7 +1785,6 @@
       seekTo(maxT > 0 ? maxT : MAX_DURATION_SEC);
     });
 
-    // Keyboard Hotkeys
     window.addEventListener('keydown', (e) => {
       if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
@@ -1803,16 +1845,21 @@
             const source = ctx.createBufferSource();
             source.buffer = buffer;
 
+            // Envelope GainNode to ensure smooth entry and zero clicking
             const gainNode = ctx.createGain();
-            gainNode.gain.value = ctrl.volume;
-            source.connect(gainNode);
-            gainNode.connect(ctx.destination);
-
             const offsetInClip = Math.max(0, state.currentTime - clip.startTime);
             const scheduledStart = Math.max(0, clip.startTime - state.currentTime);
             const playDuration = clip.duration - offsetInClip;
 
-            source.start(ctx.currentTime + scheduledStart, offsetInClip, playDuration);
+            // Ramp envelope
+            const startTimePoint = ctx.currentTime + scheduledStart;
+            gainNode.gain.setValueAtTime(0.001, startTimePoint);
+            gainNode.gain.exponentialRampToValueAtTime(ctrl.volume || 0.001, startTimePoint + 0.015);
+
+            source.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            source.start(startTimePoint, offsetInClip, playDuration);
             state.activeSourceNodes.push(source);
           }
         }
@@ -1932,7 +1979,8 @@
           const blob = new Blob(recordedAudioChunks, { type: 'audio/webm' });
           const arrayBuf = await blob.arrayBuffer();
           const ctx = getAudioContext();
-          recordedBuffer = await decodeAudioDataPromise(ctx, arrayBuf);
+          const rawBuffer = await decodeAudioDataPromise(ctx, arrayBuf);
+          recordedBuffer = sanitizeAudioBuffer(ctx, rawBuffer);
           document.getElementById('recorded-audio-actions').classList.remove('hidden');
         };
 
@@ -2292,7 +2340,7 @@
         state.currentTaskId = defaultTask.id;
         
         const ctx = getAudioContext();
-        const initialSpeechText = "SonicForge online. All systems nominal.";
+        const initialSpeechText = "SonicForge online. All tracks calibrated.";
         const speechBuf = await fetchNaturalSpeechBuffer(ctx, initialSpeechText, 'Russell');
         const clipSpeechId = 'clip_init_speech';
         window.clipBufferRegistry[clipSpeechId] = speechBuf;
