@@ -32,7 +32,7 @@
       </div>
       <div>
         <h1 class="font-bold text-base text-white tracking-wide flex items-center gap-2">
-          SoundForge DAW <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v4.1 PRO</span>
+          SoundForge DAW <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v4.5 PRO</span>
         </h1>
         <p class="text-xs text-slate-400" id="current-task-display">Active Task: Task 1</p>
       </div>
@@ -74,11 +74,16 @@
 
     <!-- Export & Audio Import Menu -->
     <div class="flex items-center space-x-2">
-      <!-- Import Audio Button -->
+      <!-- Import Audio / Speech Sequence -->
       <label class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-slate-200 text-xs font-semibold rounded-lg border border-[#30363d] cursor-pointer flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-file-import text-cyan-400"></i> Import Audio
-        <input type="file" id="import-audio-input" accept="audio/*" class="hidden">
+        <i class="fa-solid fa-file-import text-cyan-400"></i> Import Audio / .speech
+        <input type="file" id="import-audio-input" accept="audio/*,.speech,.json" class="hidden">
       </label>
+
+      <!-- Save Sequence Data (.speech) -->
+      <button id="btn-save-sequence" class="px-3 py-1.5 bg-cyan-700 hover:bg-cyan-600 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 transition" title="Save timeline sequence as portable data file">
+        <i class="fa-solid fa-file-code"></i> Save Sequence (.speech)
+      </button>
 
       <!-- Export WAV -->
       <button id="btn-export-wav" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 transition">
@@ -208,8 +213,8 @@
       <div class="p-3 bg-[#0d1117] border-t border-[#30363d]">
         <div id="dropzone" class="border-2 border-dashed border-[#30363d] hover:border-cyan-500 rounded-lg p-3 text-center cursor-pointer transition">
           <i class="fa-solid fa-cloud-arrow-up text-cyan-400 text-lg mb-1 block"></i>
-          <span class="text-xs font-semibold text-slate-300 block">Drop Speech or Audio Files</span>
-          <span class="text-[10px] text-slate-500">Supports WAV, MP3, OGG, WebM</span>
+          <span class="text-xs font-semibold text-slate-300 block">Drop Speech, Audio or .speech Files</span>
+          <span class="text-[10px] text-slate-500">Supports WAV, MP3, OGG, .speech, .json</span>
         </div>
       </div>
 
@@ -365,6 +370,17 @@
       return audioCtx;
     }
 
+    let availableVoices = [];
+    function loadVoices() {
+      if ('speechSynthesis' in window) {
+        availableVoices = window.speechSynthesis.getVoices();
+      }
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      loadVoices();
+    }
+
     let appState = {
       activeTaskId: 'task_1',
       tasks: [
@@ -387,10 +403,11 @@
     let playheadTime = 0;
     let playbackStartTime = 0;
     let activeNodes = [];
+    let scheduledSpeechTimeouts = [];
     let animationFrameId = null;
 
     /* ==========================================================================
-       INDEXED-DB AUDIO STORAGE (PREVENTS CORRUPT / GHOST AUDIO ON RELOAD)
+       INDEXED-DB AUDIO STORAGE
        ========================================================================== */
     let dbInstance = null;
     function openDatabase() {
@@ -466,7 +483,11 @@
               start: c.start,
               duration: c.duration,
               color: c.color,
-              bufferKey: c.bufferKey
+              bufferKey: c.bufferKey,
+              isSpeech: !!c.isSpeech,
+              speechText: c.speechText || '',
+              voiceName: c.voiceName || '',
+              voiceLang: c.voiceLang || ''
             })))
           })),
           trackSettings: appState.trackSettings
@@ -487,7 +508,6 @@
             appState.activeTaskId = parsed.activeTaskId || parsed.tasks[0].id;
             if (parsed.trackSettings) appState.trackSettings = parsed.trackSettings;
 
-            // Rehydrate buffers from IndexedDB
             for (const task of appState.tasks) {
               for (const track of task.tracks) {
                 for (const clip of track) {
@@ -830,16 +850,56 @@
     }
 
     /* ==========================================================================
-       EXTERNAL AUDIO / SPEECH FILE IMPORT
+       EXTERNAL AUDIO & .SPEECH SEQUENCE IMPORT
        ========================================================================== */
-    async function handleAudioFileImport(file, targetTrack = 0) {
+    async function handleFileImport(file, targetTrack = 0) {
       if (!file) return;
+
+      // Handle .speech or JSON timeline sequences
+      if (file.name.endsWith('.speech') || file.name.endsWith('.json')) {
+        document.getElementById('export-status').innerText = `Loading sequence ${file.name}...`;
+        try {
+          const text = await file.text();
+          const json = JSON.parse(text);
+
+          if (!json.clips || !Array.isArray(json.clips)) {
+            throw new Error('Not a valid speech sequence data file.');
+          }
+
+          const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+          
+          // Clear current Track 1 speech lane or append
+          json.clips.forEach((c, idx) => {
+            task.tracks[0].push({
+              id: 'speech_clip_' + Date.now() + '_' + idx,
+              name: c.name || (c.text.substring(0, 24) + '...'),
+              start: Math.max(0, c.start),
+              duration: c.duration || 2.0,
+              color: 'from-cyan-600 to-blue-700',
+              isSpeech: true,
+              speechText: c.text,
+              voiceName: c.voiceName || '',
+              voiceLang: c.voiceLang || 'en-AU'
+            });
+          });
+
+          document.getElementById('export-status').innerText = 'Sequence loaded cleanly!';
+          renderTimeline();
+          saveToLocalStorage();
+          return;
+        } catch (err) {
+          console.error('Sequence parse error:', err);
+          alert('Could not parse sequence data file: ' + err.message);
+          document.getElementById('export-status').innerText = 'Sequence load error';
+          return;
+        }
+      }
+
+      // Standard audio file import (WAV, MP3, OGG, WebM)
       document.getElementById('export-status').innerText = `Decoding ${file.name}...`;
       try {
         const ctx = getAudioContext();
         const arrayBuffer = await file.arrayBuffer();
-        
-        // Accurate browser decode (WAV, MP3, OGG, WebM)
         const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
 
         const bufferKey = 'imported_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
@@ -853,7 +913,8 @@
           start: playheadTime,
           duration: Math.min(decodedBuffer.duration, MAX_DURATION - playheadTime),
           color: targetTrack === 0 ? 'from-cyan-600 to-blue-700' : 'from-indigo-600 to-purple-700',
-          bufferKey: bufferKey
+          bufferKey: bufferKey,
+          isSpeech: false
         });
 
         document.getElementById('export-status').innerText = 'Audio imported cleanly!';
@@ -861,7 +922,7 @@
         saveToLocalStorage();
       } catch (err) {
         console.error('Import audio error:', err);
-        alert('Could not decode audio file. Please ensure it is a valid MP3, WAV, or OGG file.');
+        alert('Could not decode audio file. Ensure it is a valid audio or .speech file.');
         document.getElementById('export-status').innerText = 'Import error';
       }
     }
@@ -873,7 +934,7 @@
       dropzone.addEventListener('click', () => importInput.click());
       importInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
-          handleAudioFileImport(e.target.files[0], 0);
+          handleFileImport(e.target.files[0], 0);
           importInput.value = '';
         }
       });
@@ -892,7 +953,7 @@
       });
       dropzone.addEventListener('drop', (e) => {
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-          handleAudioFileImport(e.dataTransfer.files[0], 0);
+          handleFileImport(e.dataTransfer.files[0], 0);
         }
       });
 
@@ -902,7 +963,7 @@
           e.preventDefault();
           const trackIdx = parseInt(lane.getAttribute('data-track-id'), 10);
           if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleAudioFileImport(e.dataTransfer.files[0], trackIdx);
+            handleFileImport(e.dataTransfer.files[0], trackIdx);
           }
         });
       });
@@ -978,7 +1039,10 @@
           clipEl.setAttribute('data-clip-id', clip.id);
 
           clipEl.innerHTML = `
-            <span class="truncate text-[11px] font-semibold select-none pl-1">${clip.name}</span>
+            <span class="truncate text-[11px] font-semibold select-none pl-1 flex items-center gap-1">
+              ${clip.isSpeech ? '<i class="fa-solid fa-comment-dots text-[10px] text-cyan-200"></i>' : ''}
+              ${clip.name}
+            </span>
             <button class="w-4 h-4 rounded hover:bg-black/30 flex items-center justify-center text-[10px] text-white/70 hover:text-white" onclick="deleteClip('${clip.id}', event)">
               <i class="fa-solid fa-xmark"></i>
             </button>
@@ -1064,15 +1128,30 @@
     document.getElementById('btn-jump-end').onclick = () => seekTo(MAX_DURATION);
 
     /* ==========================================================================
-       REAL-TIME MULTI-TRACK PLAYBACK ENGINE
+       SYNCHRONIZED MULTI-TRACK & SPEECH PLAYBACK ENGINE
        ========================================================================== */
+    function resolveVoice(voiceName, voiceLang) {
+      if (!availableVoices.length) loadVoices();
+      let match = availableVoices.find(v => v.name === voiceName);
+      if (match) return match;
+      if (voiceLang) {
+        match = availableVoices.find(v => v.lang === voiceLang);
+        if (match) return match;
+      }
+      return availableVoices[0] || null;
+    }
+
     function startPlayback() {
       const ctx = getAudioContext();
       activeNodes = [];
+      scheduledSpeechTimeouts = [];
       playbackStartTime = ctx.currentTime - playheadTime;
 
       const task = appState.tasks.find(t => t.id === appState.activeTaskId);
       const anySolo = appState.trackSettings.some(ts => ts.solo);
+
+      // Cancel previous speech synthesis
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 
       task.tracks.forEach((track, trackIdx) => {
         const settings = appState.trackSettings[trackIdx];
@@ -1082,6 +1161,25 @@
         track.forEach(clip => {
           const clipEnd = clip.start + clip.duration;
           if (clipEnd > playheadTime) {
+
+            // Native Speech Synthesis clip
+            if (clip.isSpeech && clip.speechText) {
+              const delayMs = Math.max(0, (clip.start - playheadTime) * 1000);
+              const timeoutId = setTimeout(() => {
+                if (!isPlaying) return;
+                const utterance = new SpeechSynthesisUtterance(clip.speechText);
+                const voice = resolveVoice(clip.voiceName, clip.voiceLang);
+                if (voice) utterance.voice = voice;
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = settings.volume;
+                window.speechSynthesis.speak(utterance);
+              }, delayMs);
+              scheduledSpeechTimeouts.push(timeoutId);
+              return;
+            }
+
+            // Normal audio buffer clip (SFX, Foley, Ambience)
             const buf = bufferRegistry.get(clip.bufferKey);
             if (!buf) return;
 
@@ -1129,10 +1227,17 @@
 
     function stopPlayback() {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      
       activeNodes.forEach(node => {
         try { node.stop(); } catch (e) {}
       });
       activeNodes = [];
+
+      scheduledSpeechTimeouts.forEach(t => clearTimeout(t));
+      scheduledSpeechTimeouts = [];
+
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
       isPlaying = false;
       document.getElementById('play-pause-icon').className = 'fa-solid fa-play text-base';
       updatePlayheadPosition();
@@ -1199,6 +1304,64 @@
     }
 
     /* ==========================================================================
+       SAVE TIMELINE SEQUENCE AS .SPEECH DATA FILE
+       ========================================================================== */
+    document.getElementById('btn-save-sequence').onclick = () => {
+      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+      if (!task) return;
+
+      const sequencePayload = {
+        format: "soundforge-sequence-data",
+        version: "1.0",
+        taskId: task.id,
+        taskName: task.name,
+        exportedAt: new Date().toISOString(),
+        trackSettings: appState.trackSettings,
+        tracks: task.tracks.map((track, trackIdx) => ({
+          trackIndex: trackIdx,
+          trackName: trackIdx === 0 ? "Speech" : trackIdx === 1 ? "SFX" : trackIdx === 2 ? "Foley" : "Ambience",
+          clips: track.map(clip => ({
+            id: clip.id,
+            name: clip.name,
+            start: clip.start,
+            duration: clip.duration,
+            isSpeech: !!clip.isSpeech,
+            speechText: clip.speechText || "",
+            voiceName: clip.voiceName || "",
+            voiceLang: clip.voiceLang || "en-AU"
+          }))
+        })),
+        // Flat speech clips convenience list
+        clips: (task.tracks[0] || []).filter(c => c.isSpeech).map(c => ({
+          text: c.speechText,
+          name: c.name,
+          start: c.start,
+          duration: c.duration,
+          voiceName: c.voiceName,
+          voiceLang: c.voiceLang
+        }))
+      };
+
+      const jsonStr = JSON.stringify(sequencePayload, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const filename = `${task.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sequence.speech`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+
+      document.getElementById('export-status').innerText = `Saved ${filename}!`;
+      setTimeout(() => { document.getElementById('export-status').innerText = 'Ready'; }, 3000);
+    };
+
+    /* ==========================================================================
        OFFLINE AUDIO RENDERING & EXPORT (WAV & MP3)
        ========================================================================== */
     async function renderMixdownBuffer() {
@@ -1260,15 +1423,15 @@
       setUint32(0x46464952); // "RIFF"
       setUint32(length - 8);
       setUint32(0x45564157); // "WAVE"
-      setUint32(0x20746d66); // "fmt " chunk
-      setUint32(16);          // length = 16
-      setUint16(1);           // PCM (uncompressed)
+      setUint32(0x20746d66); // "fmt "
+      setUint32(16);          // 16-bit
+      setUint16(1);           // Linear PCM
       setUint16(numOfChan);
       setUint32(buffer.sampleRate);
       setUint32(buffer.sampleRate * 2 * numOfChan);
       setUint16(numOfChan * 2);
       setUint16(16);          // 16-bit
-      setUint32(0x61746164); // "data" chunk
+      setUint32(0x61746164); // "data"
       setUint32(length - pos - 4);
 
       for (let i = 0; i < buffer.numberOfChannels; i++) {
@@ -1385,7 +1548,8 @@
         start: playheadTime,
         duration: buf.duration,
         color: 'from-orange-600 to-amber-700',
-        bufferKey: bufferKey
+        bufferKey: bufferKey,
+        isSpeech: false
       });
       renderTimeline();
       saveToLocalStorage();
@@ -1412,7 +1576,8 @@
         start: playheadTime,
         duration: buf.duration,
         color: 'from-emerald-700 to-teal-800',
-        bufferKey: bufferKey
+        bufferKey: bufferKey,
+        isSpeech: false
       });
       renderTimeline();
       saveToLocalStorage();
