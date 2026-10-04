@@ -19,7 +19,6 @@
     }
     .clip-item { transition: box-shadow 0.15s ease, transform 0.05s ease; cursor: grab; }
     .clip-item:active { cursor: grabbing; box-shadow: 0 0 12px rgba(56, 189, 248, 0.7); }
-    .clip-handle { cursor: ew-resize; }
   </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
@@ -32,7 +31,7 @@
       </div>
       <div>
         <h1 class="font-bold text-base text-white tracking-wide flex items-center gap-2">
-          SoundForge DAW <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v4.5 PRO</span>
+          SoundForge DAW <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v5.0 BUNDLE</span>
         </h1>
         <p class="text-xs text-slate-400" id="current-task-display">Active Task: Task 1</p>
       </div>
@@ -43,10 +42,10 @@
       <button id="btn-jump-start" title="Jump to Start (Home)" class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center justify-center transition">
         <i class="fa-solid fa-backward-step text-sm"></i>
       </button>
-      <button id="btn-step-back-5" title="Step Back 5s (Shift+Left)" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
+      <button id="btn-step-back-5" title="Step Back 5s" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
         <i class="fa-solid fa-angles-left text-xs"></i> 5s
       </button>
-      <button id="btn-step-back-1" title="Step Back 1s (Left Arrow)" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
+      <button id="btn-step-back-1" title="Step Back 1s" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
         <i class="fa-solid fa-chevron-left text-xs"></i> 1s
       </button>
 
@@ -54,13 +53,13 @@
         <i class="fa-solid fa-play text-base" id="play-pause-icon"></i>
       </button>
 
-      <button id="btn-step-fwd-1" title="Step Forward 1s (Right Arrow)" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
+      <button id="btn-step-fwd-1" title="Step Forward 1s" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
         1s <i class="fa-solid fa-chevron-right text-xs"></i>
       </button>
-      <button id="btn-step-fwd-5" title="Step Forward 5s (Shift+Right)" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
+      <button id="btn-step-fwd-5" title="Step Forward 5s" class="px-2 h-8 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center gap-1 transition">
         5s <i class="fa-solid fa-angles-right text-xs"></i>
       </button>
-      <button id="btn-jump-end" title="Jump to End of Timeline (End)" class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center justify-center transition">
+      <button id="btn-jump-end" title="Jump to End" class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-[#21262d] flex items-center justify-center transition">
         <i class="fa-solid fa-forward-step text-sm"></i>
       </button>
 
@@ -74,25 +73,23 @@
 
     <!-- Export & Audio Import Menu -->
     <div class="flex items-center space-x-2">
-      <!-- Import Audio / Speech Sequence -->
+      <!-- Import Audio / Bundle -->
       <label class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-slate-200 text-xs font-semibold rounded-lg border border-[#30363d] cursor-pointer flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-file-import text-cyan-400"></i> Import Audio / .speech
-        <input type="file" id="import-audio-input" accept="audio/*,.speech,.json" class="hidden">
+        <i class="fa-solid fa-file-import text-cyan-400"></i> Import Audio / .sfproj
+        <input type="file" id="import-audio-input" accept="audio/*,.sfproj,.speech,.json" class="hidden">
       </label>
 
-      <!-- Save Sequence Data (.speech) -->
-      <button id="btn-save-sequence" class="px-3 py-1.5 bg-cyan-700 hover:bg-cyan-600 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 transition" title="Save timeline sequence as portable data file">
-        <i class="fa-solid fa-file-code"></i> Save Sequence (.speech)
+      <!-- EXPORT UNIFIED BUNDLE (Option 1) -->
+      <button id="btn-export-bundle" class="px-3 py-1.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-box-archive"></i> Export .sfproj Bundle
       </button>
 
-      <!-- Export WAV -->
+      <!-- Traditional WAV & MP3 -->
       <button id="btn-export-wav" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-file-audio"></i> Export WAV
+        <i class="fa-solid fa-file-audio"></i> WAV
       </button>
-
-      <!-- Export MP3 -->
       <button id="btn-export-mp3" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-music"></i> Export MP3
+        <i class="fa-solid fa-music"></i> MP3
       </button>
     </div>
   </header>
@@ -113,9 +110,7 @@
             <i class="fa-solid fa-plus"></i> New Task
           </button>
         </div>
-        <div id="task-list" class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-          <!-- Tasks dynamically rendered here -->
-        </div>
+        <div id="task-list" class="space-y-1.5 max-h-40 overflow-y-auto pr-1"></div>
       </div>
 
       <!-- SOUNDS & PROCEDURAL GENERATORS -->
@@ -141,7 +136,6 @@
         <!-- TAB CONTENT 2: PROCEDURAL FOLEY GENERATOR -->
         <div id="tab-foley" class="flex-1 overflow-y-auto p-3 space-y-3 hidden">
           <div class="text-[11px] text-slate-400">Custom mechanical & acoustic Foley simulator:</div>
-          
           <div class="bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d]">
             <label class="text-xs font-semibold text-slate-300 block mb-1">Foley Material / Action</label>
             <select id="foley-type-select" class="w-full bg-[#161b22] border border-[#30363d] rounded p-1.5 text-xs text-white">
@@ -153,7 +147,6 @@
               <option value="glass">Glass Shutter</option>
             </select>
           </div>
-
           <div class="bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d] space-y-2">
             <div>
               <div class="flex justify-between text-[11px] text-slate-400 mb-1">
@@ -173,10 +166,9 @@
           </div>
         </div>
 
-        <!-- TAB CONTENT 3: AMBIENCE & DRONE GENERATOR -->
+        <!-- TAB CONTENT 3: AMBIENCE GENERATOR -->
         <div id="tab-ambience" class="flex-1 overflow-y-auto p-3 space-y-3 hidden">
-          <div class="text-[11px] text-slate-400">Generative endless background environments:</div>
-          
+          <div class="text-[11px] text-slate-400">Generative background environments:</div>
           <div class="bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d]">
             <label class="text-xs font-semibold text-slate-300 block mb-1">Environment Tone</label>
             <select id="ambience-type-select" class="w-full bg-[#161b22] border border-[#30363d] rounded p-1.5 text-xs text-white">
@@ -187,7 +179,6 @@
               <option value="office">Room Air Hum</option>
             </select>
           </div>
-
           <div class="bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d] space-y-2">
             <div>
               <div class="flex justify-between text-[11px] text-slate-400 mb-1">
@@ -209,18 +200,18 @@
 
       </div>
 
-      <!-- SPEECH / AUDIO IMPORT QUICK DROPZONE -->
+      <!-- DROPZONE -->
       <div class="p-3 bg-[#0d1117] border-t border-[#30363d]">
         <div id="dropzone" class="border-2 border-dashed border-[#30363d] hover:border-cyan-500 rounded-lg p-3 text-center cursor-pointer transition">
           <i class="fa-solid fa-cloud-arrow-up text-cyan-400 text-lg mb-1 block"></i>
-          <span class="text-xs font-semibold text-slate-300 block">Drop Speech, Audio or .speech Files</span>
-          <span class="text-[10px] text-slate-500">Supports WAV, MP3, OGG, .speech, .json</span>
+          <span class="text-xs font-semibold text-slate-300 block">Drop Audio or .sfproj Bundle</span>
+          <span class="text-[10px] text-slate-500">Supports .sfproj, .speech, WAV, MP3</span>
         </div>
       </div>
 
     </aside>
 
-    <!-- RIGHT MAIN CANVAS: TIMELINE & MULTI-TRACK MIXER -->
+    <!-- RIGHT MAIN CANVAS: TIMELINE -->
     <main class="flex-1 flex flex-col bg-[#090d13] overflow-hidden">
       
       <!-- TIMELINE RULER -->
@@ -230,15 +221,13 @@
 
       <!-- TRACKS CONTAINER -->
       <div class="flex-1 overflow-y-auto relative" id="tracks-scroll-area">
-        
-        <!-- Interactive Playhead Line -->
         <div id="playhead" class="absolute top-0 bottom-0 w-[2px] bg-rose-500 z-30 pointer-events-none" style="left: 192px;">
           <div class="w-3 h-3 bg-rose-500 rounded-full -ml-[5px] -mt-1 shadow-sm shadow-rose-500"></div>
         </div>
 
         <div class="space-y-1.5 p-2" id="tracks-wrapper">
 
-          <!-- TRACK 1: SPEECH & DIALOGUE -->
+          <!-- TRACK 1: SPEECH -->
           <div class="h-28 bg-[#161b22] rounded-lg border border-[#30363d] flex relative overflow-hidden track-lane" data-track-id="0">
             <div class="w-48 bg-[#0d1117] border-r border-[#30363d] p-2 flex flex-col justify-between flex-shrink-0 z-10">
               <div class="flex items-center justify-between">
@@ -249,8 +238,8 @@
               </div>
               <div class="space-y-1.5">
                 <div class="flex items-center justify-between gap-1">
-                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleMute(0)">MUTE</button>
-                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleSolo(0)">SOLO</button>
+                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] text-slate-300" onclick="toggleMute(0)">MUTE</button>
+                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] text-slate-300" onclick="toggleSolo(0)">SOLO</button>
                   <button class="w-6 py-0.5 rounded text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300" onclick="clearTrack(0)" title="Clear Track"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
                 <div class="flex items-center gap-1.5">
@@ -262,7 +251,7 @@
             <div class="flex-1 relative timeline-grid h-full overflow-hidden track-drop-target" data-track-id="0"></div>
           </div>
 
-          <!-- TRACK 2: SOUND EFFECTS -->
+          <!-- TRACK 2: SFX -->
           <div class="h-28 bg-[#161b22] rounded-lg border border-[#30363d] flex relative overflow-hidden track-lane" data-track-id="1">
             <div class="w-48 bg-[#0d1117] border-r border-[#30363d] p-2 flex flex-col justify-between flex-shrink-0 z-10">
               <div class="flex items-center justify-between">
@@ -273,8 +262,8 @@
               </div>
               <div class="space-y-1.5">
                 <div class="flex items-center justify-between gap-1">
-                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleMute(1)">MUTE</button>
-                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleSolo(1)">SOLO</button>
+                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] text-slate-300" onclick="toggleMute(1)">MUTE</button>
+                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] text-slate-300" onclick="toggleSolo(1)">SOLO</button>
                   <button class="w-6 py-0.5 rounded text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300" onclick="clearTrack(1)" title="Clear Track"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
                 <div class="flex items-center gap-1.5">
@@ -297,8 +286,8 @@
               </div>
               <div class="space-y-1.5">
                 <div class="flex items-center justify-between gap-1">
-                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleMute(2)">MUTE</button>
-                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleSolo(2)">SOLO</button>
+                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] text-slate-300" onclick="toggleMute(2)">MUTE</button>
+                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] text-slate-300" onclick="toggleSolo(2)">SOLO</button>
                   <button class="w-6 py-0.5 rounded text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300" onclick="clearTrack(2)" title="Clear Track"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
                 <div class="flex items-center gap-1.5">
@@ -310,7 +299,7 @@
             <div class="flex-1 relative timeline-grid h-full overflow-hidden track-drop-target" data-track-id="2"></div>
           </div>
 
-          <!-- TRACK 4: AMBIENCE & MUSIC -->
+          <!-- TRACK 4: AMBIENCE -->
           <div class="h-28 bg-[#161b22] rounded-lg border border-[#30363d] flex relative overflow-hidden track-lane" data-track-id="3">
             <div class="w-48 bg-[#0d1117] border-r border-[#30363d] p-2 flex flex-col justify-between flex-shrink-0 z-10">
               <div class="flex items-center justify-between">
@@ -321,8 +310,8 @@
               </div>
               <div class="space-y-1.5">
                 <div class="flex items-center justify-between gap-1">
-                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleMute(3)">MUTE</button>
-                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] hover:bg-[#30363d] text-slate-300" onclick="toggleSolo(3)">SOLO</button>
+                  <button class="btn-mute flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] text-slate-300" onclick="toggleMute(3)">MUTE</button>
+                  <button class="btn-solo flex-1 py-0.5 rounded text-[10px] font-bold bg-[#21262d] text-slate-300" onclick="toggleSolo(3)">SOLO</button>
                   <button class="w-6 py-0.5 rounded text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300" onclick="clearTrack(3)" title="Clear Track"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
                 <div class="flex items-center gap-1.5">
@@ -337,13 +326,12 @@
         </div>
       </div>
 
-      <!-- FOOTER STATUS & SHORTCUT HINTS -->
+      <!-- FOOTER STATUS -->
       <footer class="h-8 bg-[#161b22] border-t border-[#30363d] px-4 flex items-center justify-between text-xs text-slate-400 flex-shrink-0">
         <div class="flex items-center space-x-4">
           <span><kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">Space</kbd> Play/Pause</span>
-          <span><kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">&larr;</kbd>/<kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">&rarr;</kbd> Step 1s</span>
-          <span><kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">Shift</kbd>+<kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">&larr;/&rarr;</kbd> Step 5s</span>
-          <span><kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">Del</kbd> Remove selected clip</span>
+          <span><kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">&larr;/&rarr;</kbd> Step 1s</span>
+          <span><kbd class="px-1 py-0.5 bg-[#21262d] rounded text-[10px]">Del</kbd> Remove clip</span>
         </div>
         <div id="export-status" class="text-cyan-400 font-medium">Ready</div>
       </footer>
@@ -352,29 +340,20 @@
   </div>
 
   <script>
-    /* ==========================================================================
-       GLOBAL STATE & CONFIGURATION
-       ========================================================================== */
     const MAX_DURATION = 180;
     const PIXELS_PER_SECOND = 20;
     const TOTAL_WIDTH = MAX_DURATION * PIXELS_PER_SECOND;
 
     let audioCtx = null;
     function getAudioContext() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       return audioCtx;
     }
 
     let availableVoices = [];
     function loadVoices() {
-      if ('speechSynthesis' in window) {
-        availableVoices = window.speechSynthesis.getVoices();
-      }
+      if ('speechSynthesis' in window) availableVoices = window.speechSynthesis.getVoices();
     }
     if ('speechSynthesis' in window) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
@@ -406,23 +385,16 @@
     let scheduledSpeechTimeouts = [];
     let animationFrameId = null;
 
-    /* ==========================================================================
-       INDEXED-DB AUDIO STORAGE
-       ========================================================================== */
+    /* Database & Storage Persistence */
     let dbInstance = null;
     function openDatabase() {
       return new Promise((resolve) => {
         const req = indexedDB.open('SoundForgeAudioDB_v1', 1);
         req.onupgradeneeded = (e) => {
           const db = e.target.result;
-          if (!db.objectStoreNames.contains('audioBuffers')) {
-            db.createObjectStore('audioBuffers', { keyPath: 'key' });
-          }
+          if (!db.objectStoreNames.contains('audioBuffers')) db.createObjectStore('audioBuffers', { keyPath: 'key' });
         };
-        req.onsuccess = (e) => {
-          dbInstance = e.target.result;
-          resolve(dbInstance);
-        };
+        req.onsuccess = (e) => { dbInstance = e.target.result; resolve(dbInstance); };
         req.onerror = () => resolve(null);
       });
     }
@@ -430,26 +402,17 @@
     async function storeBufferInDB(key, buffer) {
       if (!dbInstance) await openDatabase();
       if (!dbInstance) return;
-
       const channelsData = [];
-      for (let i = 0; i < buffer.numberOfChannels; i++) {
-        channelsData.push(buffer.getChannelData(i));
-      }
-
+      for (let i = 0; i < buffer.numberOfChannels; i++) channelsData.push(buffer.getChannelData(i));
       const tx = dbInstance.transaction('audioBuffers', 'readwrite');
       tx.objectStore('audioBuffers').put({
-        key: key,
-        sampleRate: buffer.sampleRate,
-        numberOfChannels: buffer.numberOfChannels,
-        length: buffer.length,
-        channels: channelsData
+        key: key, sampleRate: buffer.sampleRate, numberOfChannels: buffer.numberOfChannels, length: buffer.length, channels: channelsData
       });
     }
 
     async function loadBufferFromDB(key) {
       if (!dbInstance) await openDatabase();
       if (!dbInstance) return null;
-
       return new Promise((resolve) => {
         const tx = dbInstance.transaction('audioBuffers', 'readonly');
         const req = tx.objectStore('audioBuffers').get(key);
@@ -458,56 +421,39 @@
           if (!res) return resolve(null);
           const ctx = getAudioContext();
           const buf = ctx.createBuffer(res.numberOfChannels, res.length, res.sampleRate);
-          for (let i = 0; i < res.numberOfChannels; i++) {
-            buf.copyToChannel(res.channels[i], i);
-          }
+          for (let i = 0; i < res.numberOfChannels; i++) buf.copyToChannel(res.channels[i], i);
           resolve(buf);
         };
         req.onerror = () => resolve(null);
       });
     }
 
-    /* ==========================================================================
-       LOCAL STORAGE & STATE REHYDRATION
-       ========================================================================== */
     function saveToLocalStorage() {
       try {
         const payload = {
           activeTaskId: appState.activeTaskId,
           tasks: appState.tasks.map(t => ({
-            id: t.id,
-            name: t.name,
+            id: t.id, name: t.name,
             tracks: t.tracks.map(track => track.map(c => ({
-              id: c.id,
-              name: c.name,
-              start: c.start,
-              duration: c.duration,
-              color: c.color,
-              bufferKey: c.bufferKey,
-              isSpeech: !!c.isSpeech,
-              speechText: c.speechText || '',
-              voiceName: c.voiceName || '',
-              voiceLang: c.voiceLang || ''
+              id: c.id, name: c.name, start: c.start, duration: c.duration, color: c.color, bufferKey: c.bufferKey,
+              isSpeech: !!c.isSpeech, speechText: c.speechText || '', voiceName: c.voiceName || '', voiceLang: c.voiceLang || ''
             })))
           })),
           trackSettings: appState.trackSettings
         };
-        localStorage.setItem('soundforge_v4_state', JSON.stringify(payload));
-      } catch (err) {
-        console.warn('LocalStorage save failed:', err);
-      }
+        localStorage.setItem('soundforge_v5_bundle_state', JSON.stringify(payload));
+      } catch (err) { console.warn(err); }
     }
 
     async function loadFromLocalStorage() {
-      const data = localStorage.getItem('soundforge_v4_state');
+      const data = localStorage.getItem('soundforge_v5_bundle_state');
       if (data) {
         try {
           const parsed = JSON.parse(data);
-          if (parsed && parsed.tasks && parsed.tasks.length > 0) {
+          if (parsed && parsed.tasks) {
             appState.tasks = parsed.tasks;
             appState.activeTaskId = parsed.activeTaskId || parsed.tasks[0].id;
             if (parsed.trackSettings) appState.trackSettings = parsed.trackSettings;
-
             for (const task of appState.tasks) {
               for (const track of task.tracks) {
                 for (const clip of track) {
@@ -519,48 +465,31 @@
               }
             }
           }
-        } catch (e) {
-          console.error('Failed to parse state:', e);
-        }
+        } catch (e) { console.error(e); }
       }
     }
 
-    /* ==========================================================================
-       TASK MANAGEMENT OPERATIONS
-       ========================================================================== */
+    /* Tasks Navigation */
     function renderTasks() {
       const listEl = document.getElementById('task-list');
       listEl.innerHTML = '';
-
       appState.tasks.forEach(task => {
         const isActive = task.id === appState.activeTaskId;
         const taskCard = document.createElement('div');
-        taskCard.className = `p-2 rounded-lg border text-xs flex items-center justify-between group transition ${
-          isActive 
-            ? 'bg-cyan-950/40 border-cyan-500 text-white font-semibold' 
-            : 'bg-[#0d1117] border-[#30363d] text-slate-400 hover:text-slate-200 hover:border-slate-500 cursor-pointer'
-        }`;
-
+        taskCard.className = `p-2 rounded-lg border text-xs flex items-center justify-between group transition ${isActive ? 'bg-cyan-950/40 border-cyan-500 text-white font-semibold' : 'bg-[#0d1117] border-[#30363d] text-slate-400 hover:text-slate-200 cursor-pointer'}`;
         taskCard.innerHTML = `
           <div class="flex items-center gap-2 truncate flex-1" onclick="switchTask('${task.id}')">
             <i class="fa-solid fa-folder${isActive ? '-open text-cyan-400' : ''}"></i>
             <span class="truncate">${task.name}</span>
           </div>
           <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition ml-2">
-            <button class="p-1 hover:text-cyan-400" title="Rename" onclick="renameTask('${task.id}', event)">
-              <i class="fa-solid fa-pen text-[10px]"></i>
-            </button>
-            <button class="p-1 hover:text-indigo-400" title="Duplicate" onclick="duplicateTask('${task.id}', event)">
-              <i class="fa-solid fa-copy text-[10px]"></i>
-            </button>
-            <button class="p-1 hover:text-rose-400" title="Delete" onclick="deleteTask('${task.id}', event)">
-              <i class="fa-solid fa-trash text-[10px]"></i>
-            </button>
+            <button class="p-1 hover:text-cyan-400" title="Rename" onclick="renameTask('${task.id}', event)"><i class="fa-solid fa-pen text-[10px]"></i></button>
+            <button class="p-1 hover:text-indigo-400" title="Duplicate" onclick="duplicateTask('${task.id}', event)"><i class="fa-solid fa-copy text-[10px]"></i></button>
+            <button class="p-1 hover:text-rose-400" title="Delete" onclick="deleteTask('${task.id}', event)"><i class="fa-solid fa-trash text-[10px]"></i></button>
           </div>
         `;
         listEl.appendChild(taskCard);
       });
-
       const current = appState.tasks.find(t => t.id === appState.activeTaskId) || appState.tasks[0];
       document.getElementById('current-task-display').innerText = `Active Task: ${current ? current.name : ''}`;
     }
@@ -569,193 +498,73 @@
       stopPlayback();
       const count = appState.tasks.length + 1;
       const newId = 'task_' + Date.now();
-      appState.tasks.push({
-        id: newId,
-        name: `Task ${count}: Unnamed Session`,
-        tracks: [[], [], [], []]
-      });
+      appState.tasks.push({ id: newId, name: `Task ${count}: New Scene`, tracks: [[], [], [], []] });
       appState.activeTaskId = newId;
-      seekTo(0);
-      renderTasks();
-      renderTimeline();
-      saveToLocalStorage();
+      seekTo(0); renderTasks(); renderTimeline(); saveToLocalStorage();
     }
-
     function switchTask(taskId) {
       if (appState.activeTaskId === taskId) return;
-      stopPlayback();
-      appState.activeTaskId = taskId;
-      seekTo(0);
-      renderTasks();
-      renderTimeline();
-      saveToLocalStorage();
+      stopPlayback(); appState.activeTaskId = taskId; seekTo(0); renderTasks(); renderTimeline(); saveToLocalStorage();
     }
-
     function renameTask(taskId, e) {
       if (e) e.stopPropagation();
       const task = appState.tasks.find(t => t.id === taskId);
       if (!task) return;
       const newName = prompt('Enter new task name:', task.name);
-      if (newName && newName.trim()) {
-        task.name = newName.trim();
-        renderTasks();
-        saveToLocalStorage();
-      }
+      if (newName && newName.trim()) { task.name = newName.trim(); renderTasks(); saveToLocalStorage(); }
     }
-
     function duplicateTask(taskId, e) {
       if (e) e.stopPropagation();
       const original = appState.tasks.find(t => t.id === taskId);
       if (!original) return;
-      
       const newId = 'task_' + Date.now();
-      const clonedTracks = original.tracks.map(track => track.map(clip => ({
-        ...clip,
-        id: 'clip_' + Math.random().toString(36).substr(2, 9)
-      })));
-
-      appState.tasks.push({
-        id: newId,
-        name: `${original.name} (Copy)`,
-        tracks: clonedTracks
-      });
-      appState.activeTaskId = newId;
-      renderTasks();
-      renderTimeline();
-      saveToLocalStorage();
+      const clonedTracks = original.tracks.map(track => track.map(clip => ({ ...clip, id: 'clip_' + Math.random().toString(36).substr(2, 9) })));
+      appState.tasks.push({ id: newId, name: `${original.name} (Copy)`, tracks: clonedTracks });
+      appState.activeTaskId = newId; renderTasks(); renderTimeline(); saveToLocalStorage();
     }
-
     function deleteTask(taskId, e) {
       if (e) e.stopPropagation();
-      if (appState.tasks.length <= 1) {
-        alert('You must have at least one active task in your project.');
-        return;
-      }
+      if (appState.tasks.length <= 1) return alert('You must keep at least one active task.');
       const task = appState.tasks.find(t => t.id === taskId);
-      if (!confirm(`Are you sure you want to delete "${task.name}"?`)) return;
-
+      if (!confirm(`Delete "${task.name}"?`)) return;
       stopPlayback();
       appState.tasks = appState.tasks.filter(t => t.id !== taskId);
-      if (appState.activeTaskId === taskId) {
-        appState.activeTaskId = appState.tasks[0].id;
-      }
-      seekTo(0);
-      renderTasks();
-      renderTimeline();
-      saveToLocalStorage();
+      if (appState.activeTaskId === taskId) appState.activeTaskId = appState.tasks[0].id;
+      seekTo(0); renderTasks(); renderTimeline(); saveToLocalStorage();
     }
 
-    /* ==========================================================================
-       SYNTHESIZERS & PROCEDURAL AUDIO (SFX, FOLEY, AMBIENCE)
-       ========================================================================== */
+    /* SFX, Foley, Ambience Buffers */
     function createAntiClickBuffer(duration, generatorFn) {
       const ctx = getAudioContext();
       const sampleRate = ctx.sampleRate;
       const numFrames = Math.max(1, Math.floor(sampleRate * duration));
       const buffer = ctx.createBuffer(2, numFrames, sampleRate);
-      const ch0 = buffer.getChannelData(0);
-      const ch1 = buffer.getChannelData(1);
-
-      generatorFn(ch0, ch1, sampleRate, numFrames);
-
+      generatorFn(buffer.getChannelData(0), buffer.getChannelData(1), sampleRate, numFrames);
       const fadeFrames = Math.min(Math.floor(sampleRate * 0.01), Math.floor(numFrames / 4));
       for (let i = 0; i < fadeFrames; i++) {
         const mult = 0.5 * (1 - Math.cos((Math.PI * i) / fadeFrames));
-        ch0[i] *= mult;
-        ch1[i] *= mult;
-        const end = numFrames - 1 - i;
-        ch0[end] *= mult;
-        ch1[end] *= mult;
+        buffer.getChannelData(0)[i] *= mult; buffer.getChannelData(1)[i] *= mult;
+        buffer.getChannelData(0)[numFrames - 1 - i] *= mult; buffer.getChannelData(1)[numFrames - 1 - i] *= mult;
       }
-
       return buffer;
     }
 
     const SFX_DEFINITIONS = [
-      {
-        id: 'laser',
-        name: 'Retro Laser Shot',
-        category: 'SFX',
-        defaultTrack: 1,
-        color: 'from-amber-600 to-yellow-600',
-        generate: () => createAntiClickBuffer(0.35, (c0, c1, sr, len) => {
-          for (let i = 0; i < len; i++) {
-            const t = i / sr;
-            const freq = 1200 * Math.exp(-t * 14);
-            const val = Math.sin(2 * Math.PI * freq * t) * (1 - t / 0.35);
-            c0[i] = val * 0.6;
-            c1[i] = val * 0.6;
-          }
-        })
-      },
-      {
-        id: 'explosion',
-        name: 'Deep Cinematic Boom',
-        category: 'SFX',
-        defaultTrack: 1,
-        color: 'from-orange-600 to-rose-700',
-        generate: () => createAntiClickBuffer(1.6, (c0, c1, sr, len) => {
-          let last0 = 0, last1 = 0;
-          for (let i = 0; i < len; i++) {
-            const t = i / sr;
-            const env = Math.exp(-t * 2.8);
-            const sub = Math.sin(2 * Math.PI * (65 * Math.exp(-t * 3)) * t) * 0.7;
-            const noise = (Math.random() * 2 - 1) * 0.5;
-            last0 = (last0 + 0.04 * noise) / 1.04;
-            last1 = (last1 + 0.04 * noise) / 1.04;
-            c0[i] = (last0 + sub) * env * 0.8;
-            c1[i] = (last1 + sub) * env * 0.8;
-          }
-        })
-      },
-      {
-        id: 'coin',
-        name: 'Retro Reward Ping',
-        category: 'SFX',
-        defaultTrack: 1,
-        color: 'from-yellow-500 to-amber-600',
-        generate: () => createAntiClickBuffer(0.4, (c0, c1, sr, len) => {
-          for (let i = 0; i < len; i++) {
-            const t = i / sr;
-            const f = t < 0.1 ? 987.77 : 1318.51;
-            const val = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 7);
-            c0[i] = val * 0.5;
-            c1[i] = val * 0.5;
-          }
-        })
-      },
-      {
-        id: 'whoosh',
-        name: 'Dynamic Air Whoosh',
-        category: 'SFX',
-        defaultTrack: 1,
-        color: 'from-sky-600 to-blue-700',
-        generate: () => createAntiClickBuffer(0.8, (c0, c1, sr, len) => {
-          for (let i = 0; i < len; i++) {
-            const t = i / sr;
-            const env = Math.sin((Math.PI * t) / 0.8);
-            c0[i] = (Math.random() * 2 - 1) * env * 0.4;
-            c1[i] = (Math.random() * 2 - 1) * env * 0.4;
-          }
-        })
-      }
+      { id: 'laser', name: 'Retro Laser Shot', category: 'SFX', defaultTrack: 1, color: 'from-amber-600 to-yellow-600', generate: () => createAntiClickBuffer(0.35, (c0, c1, sr, len) => { for (let i = 0; i < len; i++) { const t = i / sr; const f = 1200 * Math.exp(-t * 14); const v = Math.sin(2 * Math.PI * f * t) * (1 - t / 0.35); c0[i] = v * 0.6; c1[i] = v * 0.6; } }) },
+      { id: 'explosion', name: 'Cinematic Boom', category: 'SFX', defaultTrack: 1, color: 'from-orange-600 to-rose-700', generate: () => createAntiClickBuffer(1.6, (c0, c1, sr, len) => { let l0=0, l1=0; for (let i = 0; i < len; i++) { const t = i / sr; const env = Math.exp(-t * 2.8); const s = Math.sin(2 * Math.PI * (65 * Math.exp(-t * 3)) * t) * 0.7; const n = (Math.random() * 2 - 1) * 0.5; l0 = (l0 + 0.04 * n)/1.04; l1 = (l1 + 0.04 * n)/1.04; c0[i] = (l0 + s) * env * 0.8; c1[i] = (l1 + s) * env * 0.8; } }) },
+      { id: 'coin', name: 'Reward Ping', category: 'SFX', defaultTrack: 1, color: 'from-yellow-500 to-amber-600', generate: () => createAntiClickBuffer(0.4, (c0, c1, sr, len) => { for (let i = 0; i < len; i++) { const t = i / sr; const f = t < 0.1 ? 987.77 : 1318.51; const v = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 7); c0[i] = v * 0.5; c1[i] = v * 0.5; } }) },
+      { id: 'whoosh', name: 'Air Whoosh', category: 'SFX', defaultTrack: 1, color: 'from-sky-600 to-blue-700', generate: () => createAntiClickBuffer(0.8, (c0, c1, sr, len) => { for (let i = 0; i < len; i++) { const t = i / sr; const env = Math.sin((Math.PI * t) / 0.8); const n = (Math.random() * 2 - 1) * env * 0.4; c0[i] = n; c1[i] = n; } }) }
     ];
 
     function generateFoleyBuffer(type, damping) {
       const dur = type === 'footsteps' ? 0.4 : type === 'woodcreak' ? 1.2 : 0.8;
       return createAntiClickBuffer(dur, (c0, c1, sr, len) => {
-        let filt = 0;
-        const coeff = Math.min(0.3, damping / sr);
+        let filt = 0; const coeff = Math.min(0.3, damping / sr);
         for (let i = 0; i < len; i++) {
-          const t = i / sr;
-          const white = Math.random() * 2 - 1;
-          filt += coeff * (white - filt);
+          const t = i / sr; filt += coeff * ((Math.random() * 2 - 1) - filt);
           let env = Math.exp(-t * (type === 'footsteps' ? 12 : 3));
-          if (type === 'woodcreak') {
-            env *= 0.5 + 0.5 * Math.sin(2 * Math.PI * 25 * t);
-          }
-          c0[i] = filt * env * 0.7;
-          c1[i] = filt * env * 0.7;
+          if (type === 'woodcreak') env *= 0.5 + 0.5 * Math.sin(2 * Math.PI * 25 * t);
+          c0[i] = filt * env * 0.7; c1[i] = filt * env * 0.7;
         }
       });
     }
@@ -765,24 +574,9 @@
         let f0 = 0, f1 = 0;
         for (let i = 0; i < len; i++) {
           const t = i / sr;
-          if (type === 'rain') {
-            const drop = Math.random() < 0.003 ? (Math.random() * 2 - 1) * 0.8 : 0;
-            const hiss = (Math.random() * 2 - 1) * 0.15;
-            c0[i] = hiss + drop;
-            c1[i] = hiss + drop;
-          } else if (type === 'space') {
-            const sub = Math.sin(2 * Math.PI * 55 * t) * 0.4;
-            const pad = Math.sin(2 * Math.PI * 110.5 * t) * 0.2;
-            c0[i] = sub + pad;
-            c1[i] = sub + pad;
-          } else {
-            const n = Math.random() * 2 - 1;
-            f0 += 0.02 * (n - f0);
-            f1 += 0.02 * (n - f1);
-            const gust = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.2 * t);
-            c0[i] = f0 * gust * 0.6;
-            c1[i] = f1 * gust * 0.6;
-          }
+          if (type === 'rain') { const drop = Math.random() < 0.003 ? (Math.random()*2 - 1)*0.8 : 0; const hiss = (Math.random()*2 - 1)*0.15; c0[i] = hiss + drop; c1[i] = hiss + drop; }
+          else if (type === 'space') { const sub = Math.sin(2*Math.PI*55*t)*0.4; const pad = Math.sin(2*Math.PI*110.5*t)*0.2; c0[i] = sub + pad; c1[i] = sub + pad; }
+          else { const n = Math.random()*2 - 1; f0 += 0.02*(n - f0); f1 += 0.02*(n - f1); const gust = 0.5 + 0.5*Math.sin(2*Math.PI*0.2*t); c0[i] = f0*gust*0.6; c1[i] = f1*gust*0.6; }
         }
       });
     }
@@ -790,22 +584,14 @@
     function renderSfxList() {
       const container = document.getElementById('sfx-items-container');
       container.innerHTML = '';
-
       SFX_DEFINITIONS.forEach(def => {
         const card = document.createElement('div');
         card.className = 'bg-[#0d1117] p-2.5 rounded-lg border border-[#30363d] flex items-center justify-between';
         card.innerHTML = `
-          <div>
-            <div class="text-xs font-semibold text-slate-200">${def.name}</div>
-            <div class="text-[10px] text-slate-500">${def.category}</div>
-          </div>
+          <div><div class="text-xs font-semibold text-slate-200">${def.name}</div><div class="text-[10px] text-slate-500">${def.category}</div></div>
           <div class="flex items-center space-x-1.5">
-            <button class="px-2 py-1 bg-[#21262d] hover:bg-[#30363d] text-slate-300 rounded text-xs" title="Preview" onclick="previewSfx('${def.id}')">
-              <i class="fa-solid fa-play text-[10px]"></i>
-            </button>
-            <button class="px-2 py-1 bg-cyan-700 hover:bg-cyan-600 text-white font-bold rounded text-xs" title="Add to Track 2" onclick="addSfxToTrack('${def.id}', 1)">
-              <i class="fa-solid fa-plus text-[10px]"></i> Track 2
-            </button>
+            <button class="px-2 py-1 bg-[#21262d] text-slate-300 rounded text-xs" onclick="previewBuffer(SFX_DEFINITIONS.find(d=>d.id==='${def.id}').generate())"><i class="fa-solid fa-play text-[10px]"></i></button>
+            <button class="px-2 py-1 bg-cyan-700 text-white font-bold rounded text-xs" onclick="addSfxToTrack('${def.id}', 1)"><i class="fa-solid fa-plus text-[10px]"></i> Track 2</button>
           </div>
         `;
         container.appendChild(card);
@@ -816,273 +602,94 @@
       if (!buf) return;
       const ctx = getAudioContext();
       const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(ctx.destination);
-      src.start();
-    }
-
-    function previewSfx(defId) {
-      const def = SFX_DEFINITIONS.find(d => d.id === defId);
-      if (def) previewBuffer(def.generate());
+      src.buffer = buf; src.connect(ctx.destination); src.start();
     }
 
     async function addSfxToTrack(defId, trackIdx) {
       const def = SFX_DEFINITIONS.find(d => d.id === defId);
       if (!def) return;
       const buf = def.generate();
-      const bufferKey = 'buf_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-      
-      bufferRegistry.set(bufferKey, buf);
-      await storeBufferInDB(bufferKey, buf);
-
-      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
-      task.tracks[trackIdx].push({
-        id: 'clip_' + Date.now(),
-        name: def.name,
-        start: playheadTime,
-        duration: buf.duration,
-        color: def.color,
-        bufferKey: bufferKey
+      const key = 'buf_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      bufferRegistry.set(key, buf);
+      await storeBufferInDB(key, buf);
+      appState.tasks.find(t => t.id === appState.activeTaskId).tracks[trackIdx].push({
+        id: 'clip_' + Date.now(), name: def.name, start: playheadTime, duration: buf.duration, color: def.color, bufferKey: key, isSpeech: false
       });
-
-      renderTimeline();
-      saveToLocalStorage();
+      renderTimeline(); saveToLocalStorage();
     }
 
-    /* ==========================================================================
-       EXTERNAL AUDIO & .SPEECH SEQUENCE IMPORT
-       ========================================================================== */
-    async function handleFileImport(file, targetTrack = 0) {
-      if (!file) return;
-
-      // Handle .speech or JSON timeline sequences
-      if (file.name.endsWith('.speech') || file.name.endsWith('.json')) {
-        document.getElementById('export-status').innerText = `Loading sequence ${file.name}...`;
-        try {
-          const text = await file.text();
-          const json = JSON.parse(text);
-
-          if (!json.clips || !Array.isArray(json.clips)) {
-            throw new Error('Not a valid speech sequence data file.');
-          }
-
-          const task = appState.tasks.find(t => t.id === appState.activeTaskId);
-          
-          // Clear current Track 1 speech lane or append
-          json.clips.forEach((c, idx) => {
-            task.tracks[0].push({
-              id: 'speech_clip_' + Date.now() + '_' + idx,
-              name: c.name || (c.text.substring(0, 24) + '...'),
-              start: Math.max(0, c.start),
-              duration: c.duration || 2.0,
-              color: 'from-cyan-600 to-blue-700',
-              isSpeech: true,
-              speechText: c.text,
-              voiceName: c.voiceName || '',
-              voiceLang: c.voiceLang || 'en-AU'
-            });
-          });
-
-          document.getElementById('export-status').innerText = 'Sequence loaded cleanly!';
-          renderTimeline();
-          saveToLocalStorage();
-          return;
-        } catch (err) {
-          console.error('Sequence parse error:', err);
-          alert('Could not parse sequence data file: ' + err.message);
-          document.getElementById('export-status').innerText = 'Sequence load error';
-          return;
-        }
-      }
-
-      // Standard audio file import (WAV, MP3, OGG, WebM)
-      document.getElementById('export-status').innerText = `Decoding ${file.name}...`;
-      try {
-        const ctx = getAudioContext();
-        const arrayBuffer = await file.arrayBuffer();
-        const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
-
-        const bufferKey = 'imported_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-        bufferRegistry.set(bufferKey, decodedBuffer);
-        await storeBufferInDB(bufferKey, decodedBuffer);
-
-        const task = appState.tasks.find(t => t.id === appState.activeTaskId);
-        task.tracks[targetTrack].push({
-          id: 'clip_' + Date.now(),
-          name: file.name.replace(/\.[^/.]+$/, ""),
-          start: playheadTime,
-          duration: Math.min(decodedBuffer.duration, MAX_DURATION - playheadTime),
-          color: targetTrack === 0 ? 'from-cyan-600 to-blue-700' : 'from-indigo-600 to-purple-700',
-          bufferKey: bufferKey,
-          isSpeech: false
-        });
-
-        document.getElementById('export-status').innerText = 'Audio imported cleanly!';
-        renderTimeline();
-        saveToLocalStorage();
-      } catch (err) {
-        console.error('Import audio error:', err);
-        alert('Could not decode audio file. Ensure it is a valid audio or .speech file.');
-        document.getElementById('export-status').innerText = 'Import error';
-      }
-    }
-
-    function setupDragAndDrop() {
-      const dropzone = document.getElementById('dropzone');
-      const importInput = document.getElementById('import-audio-input');
-
-      dropzone.addEventListener('click', () => importInput.click());
-      importInput.addEventListener('change', (e) => {
-        if (e.target.files && e.target.files[0]) {
-          handleFileImport(e.target.files[0], 0);
-          importInput.value = '';
-        }
-      });
-
-      ['dragenter', 'dragover'].forEach(name => {
-        dropzone.addEventListener(name, (e) => {
-          e.preventDefault();
-          dropzone.classList.add('border-cyan-400', 'bg-cyan-950/20');
-        });
-      });
-      ['dragleave', 'drop'].forEach(name => {
-        dropzone.addEventListener(name, (e) => {
-          e.preventDefault();
-          dropzone.classList.remove('border-cyan-400', 'bg-cyan-950/20');
-        });
-      });
-      dropzone.addEventListener('drop', (e) => {
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-          handleFileImport(e.dataTransfer.files[0], 0);
-        }
-      });
-
-      document.querySelectorAll('.track-drop-target').forEach(lane => {
-        lane.addEventListener('dragover', (e) => e.preventDefault());
-        lane.addEventListener('drop', (e) => {
-          e.preventDefault();
-          const trackIdx = parseInt(lane.getAttribute('data-track-id'), 10);
-          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleFileImport(e.dataTransfer.files[0], trackIdx);
-          }
-        });
-      });
-    }
-
-    /* ==========================================================================
-       TIMELINE RENDERING & STEPPED NAVIGATION
-       ========================================================================== */
+    /* RULER & TIMELINE VIEW */
     function drawRuler() {
       const canvas = document.getElementById('ruler-canvas');
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = TOTAL_WIDTH * dpr;
-      canvas.height = 32 * dpr;
-      canvas.style.width = TOTAL_WIDTH + 'px';
-      canvas.style.height = '32px';
-
+      canvas.width = TOTAL_WIDTH * dpr; canvas.height = 32 * dpr;
+      canvas.style.width = TOTAL_WIDTH + 'px'; canvas.style.height = '32px';
       const ctx = canvas.getContext('2d');
       ctx.scale(dpr, dpr);
-      ctx.fillStyle = '#161b22';
-      ctx.fillRect(0, 0, TOTAL_WIDTH, 32);
-
-      ctx.strokeStyle = '#30363d';
-      ctx.fillStyle = '#8b949e';
-      ctx.font = '10px monospace';
-      ctx.lineWidth = 1;
-
+      ctx.fillStyle = '#161b22'; ctx.fillRect(0, 0, TOTAL_WIDTH, 32);
+      ctx.strokeStyle = '#30363d'; ctx.fillStyle = '#8b949e'; ctx.font = '10px monospace';
       for (let sec = 0; sec <= MAX_DURATION; sec++) {
         const x = sec * PIXELS_PER_SECOND;
+        ctx.beginPath();
         if (sec % 10 === 0) {
-          ctx.beginPath();
-          ctx.moveTo(x, 14);
-          ctx.lineTo(x, 32);
-          ctx.stroke();
-          const mins = Math.floor(sec / 60);
-          const secs = sec % 60;
+          ctx.moveTo(x, 14); ctx.lineTo(x, 32);
+          const mins = Math.floor(sec / 60); const secs = sec % 60;
           ctx.fillText(`${mins}:${secs < 10 ? '0' : ''}${secs}`, x + 3, 12);
-        } else if (sec % 5 === 0) {
-          ctx.beginPath();
-          ctx.moveTo(x, 22);
-          ctx.lineTo(x, 32);
-          ctx.stroke();
-        } else {
-          ctx.beginPath();
-          ctx.moveTo(x, 26);
-          ctx.lineTo(x, 32);
-          ctx.stroke();
-        }
+        } else if (sec % 5 === 0) { ctx.moveTo(x, 22); ctx.lineTo(x, 32); }
+        else { ctx.moveTo(x, 26); ctx.lineTo(x, 32); }
+        ctx.stroke();
       }
-
       canvas.onclick = (e) => {
         const rect = canvas.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        seekTo(Math.max(0, Math.min(MAX_DURATION, clickX / PIXELS_PER_SECOND)));
+        seekTo(Math.max(0, Math.min(MAX_DURATION, (e.clientX - rect.left) / PIXELS_PER_SECOND)));
       };
     }
 
     function renderTimeline() {
       const task = appState.tasks.find(t => t.id === appState.activeTaskId);
       if (!task) return;
-
       document.querySelectorAll('.track-drop-target').forEach((lane, trackIdx) => {
         lane.style.width = TOTAL_WIDTH + 'px';
         lane.innerHTML = '';
-
         task.tracks[trackIdx].forEach(clip => {
           const clipEl = document.createElement('div');
           const leftPx = clip.start * PIXELS_PER_SECOND;
           const widthPx = clip.duration * PIXELS_PER_SECOND;
-
           clipEl.className = `clip-item absolute top-1 bottom-1 rounded bg-gradient-to-r ${clip.color || 'from-cyan-600 to-blue-700'} border border-white/20 p-1 flex items-center justify-between text-xs text-white shadow-md overflow-hidden`;
           clipEl.style.left = leftPx + 'px';
           clipEl.style.width = Math.max(widthPx, 24) + 'px';
-          clipEl.setAttribute('data-clip-id', clip.id);
 
           clipEl.innerHTML = `
-            <span class="truncate text-[11px] font-semibold select-none pl-1 flex items-center gap-1">
-              ${clip.isSpeech ? '<i class="fa-solid fa-comment-dots text-[10px] text-cyan-200"></i>' : ''}
-              ${clip.name}
+            <span class="truncate text-[11px] font-semibold pl-1 flex items-center gap-1">
+              ${clip.isSpeech ? '<i class="fa-solid fa-comment-dots text-[10px] text-cyan-200"></i>' : ''} ${clip.name}
             </span>
             <button class="w-4 h-4 rounded hover:bg-black/30 flex items-center justify-center text-[10px] text-white/70 hover:text-white" onclick="deleteClip('${clip.id}', event)">
               <i class="fa-solid fa-xmark"></i>
             </button>
           `;
 
-          let isDragging = false;
-          let startX = 0;
-          let initialLeft = leftPx;
-
+          let isDragging = false, startX = 0, initialLeft = leftPx;
           clipEl.onmousedown = (e) => {
             if (e.target.closest('button')) return;
-            isDragging = true;
-            startX = e.clientX;
-            initialLeft = parseFloat(clipEl.style.left) || 0;
-            document.body.style.cursor = 'grabbing';
-
+            isDragging = true; startX = e.clientX; initialLeft = parseFloat(clipEl.style.left) || 0;
             const onMouseMove = (moveEvt) => {
               if (!isDragging) return;
-              const deltaX = moveEvt.clientX - startX;
-              let newLeft = Math.max(0, Math.min(TOTAL_WIDTH - widthPx, initialLeft + deltaX));
+              let newLeft = Math.max(0, Math.min(TOTAL_WIDTH - widthPx, initialLeft + (moveEvt.clientX - startX)));
               clipEl.style.left = newLeft + 'px';
               clip.start = newLeft / PIXELS_PER_SECOND;
             };
-
             const onMouseUp = () => {
               isDragging = false;
-              document.body.style.cursor = '';
               window.removeEventListener('mousemove', onMouseMove);
               window.removeEventListener('mouseup', onMouseUp);
               saveToLocalStorage();
             };
-
             window.addEventListener('mousemove', onMouseMove);
             window.addEventListener('mouseup', onMouseUp);
           };
-
           lane.appendChild(clipEl);
         });
       });
-
       updatePlayheadPosition();
     }
 
@@ -1094,30 +701,19 @@
         const idx = track.findIndex(c => c.id === clipId);
         if (idx !== -1) track.splice(idx, 1);
       });
-      renderTimeline();
-      saveToLocalStorage();
+      renderTimeline(); saveToLocalStorage();
     }
 
     function updatePlayheadPosition() {
-      const leftOffset = 192 + (playheadTime * PIXELS_PER_SECOND);
-      document.getElementById('playhead').style.left = leftOffset + 'px';
-
-      const mins = Math.floor(playheadTime / 60);
-      const secs = Math.floor(playheadTime % 60);
-      const ms = Math.floor((playheadTime % 1) * 100);
-      document.getElementById('time-display').innerHTML = 
-        `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}.${ms < 10 ? '0' : ''}${ms} <span class="text-slate-500 text-xs font-normal">/ 03:00.00</span>`;
+      document.getElementById('playhead').style.left = (192 + playheadTime * PIXELS_PER_SECOND) + 'px';
+      const mins = Math.floor(playheadTime / 60); const secs = Math.floor(playheadTime % 60); const ms = Math.floor((playheadTime % 1) * 100);
+      document.getElementById('time-display').innerHTML = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}.${ms < 10 ? '0' : ''}${ms} <span class="text-slate-500 text-xs font-normal">/ 03:00.00</span>`;
     }
 
     function seekTo(targetTime) {
-      const clamped = Math.max(0, Math.min(MAX_DURATION, targetTime));
-      playheadTime = clamped;
-      if (isPlaying) {
-        stopPlayback();
-        startPlayback();
-      } else {
-        updatePlayheadPosition();
-      }
+      playheadTime = Math.max(0, Math.min(MAX_DURATION, targetTime));
+      if (isPlaying) { stopPlayback(); startPlayback(); }
+      else updatePlayheadPosition();
     }
 
     document.getElementById('btn-jump-start').onclick = () => seekTo(0);
@@ -1127,18 +723,13 @@
     document.getElementById('btn-step-fwd-5').onclick = () => seekTo(playheadTime + 5);
     document.getElementById('btn-jump-end').onclick = () => seekTo(MAX_DURATION);
 
-    /* ==========================================================================
-       SYNCHRONIZED MULTI-TRACK & SPEECH PLAYBACK ENGINE
-       ========================================================================== */
-    function resolveVoice(voiceName, voiceLang) {
+    /* MULTI-TRACK AUDIO & SPEECH PLAYBACK */
+    function resolveVoice(name, lang) {
       if (!availableVoices.length) loadVoices();
-      let match = availableVoices.find(v => v.name === voiceName);
+      let match = availableVoices.find(v => v.name === name);
       if (match) return match;
-      if (voiceLang) {
-        match = availableVoices.find(v => v.lang === voiceLang);
-        if (match) return match;
-      }
-      return availableVoices[0] || null;
+      if (lang) match = availableVoices.find(v => v.lang === lang);
+      return match || availableVoices[0] || null;
     }
 
     function startPlayback() {
@@ -1149,60 +740,40 @@
 
       const task = appState.tasks.find(t => t.id === appState.activeTaskId);
       const anySolo = appState.trackSettings.some(ts => ts.solo);
-
-      // Cancel previous speech synthesis
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 
       task.tracks.forEach((track, trackIdx) => {
         const settings = appState.trackSettings[trackIdx];
-        const isMuted = settings.muted || (anySolo && !settings.solo);
-        if (isMuted) return;
+        if (settings.muted || (anySolo && !settings.solo)) return;
 
         track.forEach(clip => {
-          const clipEnd = clip.start + clip.duration;
-          if (clipEnd > playheadTime) {
-
-            // Native Speech Synthesis clip
+          if (clip.start + clip.duration > playheadTime) {
+            // Track 1 Speech Synthesis
             if (clip.isSpeech && clip.speechText) {
               const delayMs = Math.max(0, (clip.start - playheadTime) * 1000);
               const timeoutId = setTimeout(() => {
                 if (!isPlaying) return;
                 const utterance = new SpeechSynthesisUtterance(clip.speechText);
-                const voice = resolveVoice(clip.voiceName, clip.voiceLang);
-                if (voice) utterance.voice = voice;
-                utterance.rate = 1.0;
-                utterance.pitch = 1.0;
-                utterance.volume = settings.volume;
+                const v = resolveVoice(clip.voiceName, clip.voiceLang);
+                if (v) utterance.voice = v;
+                utterance.rate = 1.0; utterance.pitch = 1.0; utterance.volume = settings.volume;
                 window.speechSynthesis.speak(utterance);
               }, delayMs);
               scheduledSpeechTimeouts.push(timeoutId);
               return;
             }
 
-            // Normal audio buffer clip (SFX, Foley, Ambience)
+            // Web Audio Buffers (SFX, Foley, Ambience)
             const buf = bufferRegistry.get(clip.bufferKey);
             if (!buf) return;
-
             const src = ctx.createBufferSource();
             src.buffer = buf;
-
             const gain = ctx.createGain();
             gain.gain.value = settings.volume;
+            src.connect(gain); gain.connect(ctx.destination);
 
-            src.connect(gain);
-            gain.connect(ctx.destination);
-
-            let offset = 0;
-            let startAt = 0;
-
-            if (playheadTime >= clip.start) {
-              offset = playheadTime - clip.start;
-              startAt = ctx.currentTime;
-            } else {
-              offset = 0;
-              startAt = ctx.currentTime + (clip.start - playheadTime);
-            }
-
+            let offset = playheadTime >= clip.start ? playheadTime - clip.start : 0;
+            let startAt = playheadTime >= clip.start ? ctx.currentTime : ctx.currentTime + (clip.start - playheadTime);
             src.start(startAt, offset);
             activeNodes.push(src);
           }
@@ -1211,14 +782,9 @@
 
       isPlaying = true;
       document.getElementById('play-pause-icon').className = 'fa-solid fa-pause text-base';
-
       const tick = () => {
         playheadTime = ctx.currentTime - playbackStartTime;
-        if (playheadTime >= MAX_DURATION) {
-          seekTo(0);
-          stopPlayback();
-          return;
-        }
+        if (playheadTime >= MAX_DURATION) { seekTo(0); stopPlayback(); return; }
         updatePlayheadPosition();
         animationFrameId = requestAnimationFrame(tick);
       };
@@ -1227,375 +793,312 @@
 
     function stopPlayback() {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      
-      activeNodes.forEach(node => {
-        try { node.stop(); } catch (e) {}
-      });
+      activeNodes.forEach(node => { try { node.stop(); } catch(e){} });
       activeNodes = [];
-
       scheduledSpeechTimeouts.forEach(t => clearTimeout(t));
       scheduledSpeechTimeouts = [];
-
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-
       isPlaying = false;
       document.getElementById('play-pause-icon').className = 'fa-solid fa-play text-base';
       updatePlayheadPosition();
     }
 
-    document.getElementById('btn-play-pause').onclick = () => {
-      if (isPlaying) stopPlayback();
-      else startPlayback();
-    };
+    document.getElementById('btn-play-pause').onclick = () => isPlaying ? stopPlayback() : startPlayback();
 
-    window.addEventListener('keydown', (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      if (e.code === 'Space') {
-        e.preventDefault();
-        document.getElementById('btn-play-pause').click();
-      } else if (e.code === 'ArrowLeft') {
-        seekTo(playheadTime - (e.shiftKey ? 5 : 1));
-      } else if (e.code === 'ArrowRight') {
-        seekTo(playheadTime + (e.shiftKey ? 5 : 1));
-      } else if (e.code === 'Home') {
-        seekTo(0);
-      } else if (e.code === 'End') {
-        seekTo(MAX_DURATION);
-      }
-    });
-
-    function setTrackVolume(idx, val) {
-      appState.trackSettings[idx].volume = parseFloat(val);
-      saveToLocalStorage();
-    }
-
+    /* Volume / Mute / Solo */
+    function setTrackVolume(idx, val) { appState.trackSettings[idx].volume = parseFloat(val); saveToLocalStorage(); }
     function toggleMute(idx) {
       appState.trackSettings[idx].muted = !appState.trackSettings[idx].muted;
-      updateTrackButtons();
-      saveToLocalStorage();
+      updateTrackButtons(); saveToLocalStorage();
       if (isPlaying) { stopPlayback(); startPlayback(); }
     }
-
     function toggleSolo(idx) {
       appState.trackSettings[idx].solo = !appState.trackSettings[idx].solo;
-      updateTrackButtons();
-      saveToLocalStorage();
+      updateTrackButtons(); saveToLocalStorage();
       if (isPlaying) { stopPlayback(); startPlayback(); }
     }
-
     function updateTrackButtons() {
       document.querySelectorAll('.track-lane').forEach((lane, idx) => {
         const st = appState.trackSettings[idx];
-        const btnMute = lane.querySelector('.btn-mute');
-        const btnSolo = lane.querySelector('.btn-solo');
-
-        btnMute.className = `btn-mute flex-1 py-0.5 rounded text-[10px] font-bold ${st.muted ? 'bg-rose-700 text-white' : 'bg-[#21262d] text-slate-300'}`;
-        btnSolo.className = `btn-solo flex-1 py-0.5 rounded text-[10px] font-bold ${st.solo ? 'bg-amber-600 text-white' : 'bg-[#21262d] text-slate-300'}`;
+        lane.querySelector('.btn-mute').className = `btn-mute flex-1 py-0.5 rounded text-[10px] font-bold ${st.muted ? 'bg-rose-700 text-white' : 'bg-[#21262d] text-slate-300'}`;
+        lane.querySelector('.btn-solo').className = `btn-solo flex-1 py-0.5 rounded text-[10px] font-bold ${st.solo ? 'bg-amber-600 text-white' : 'bg-[#21262d] text-slate-300'}`;
       });
     }
-
     function clearTrack(idx) {
       const task = appState.tasks.find(t => t.id === appState.activeTaskId);
       if (task && confirm(`Clear all audio clips on Track ${idx + 1}?`)) {
-        task.tracks[idx] = [];
-        renderTimeline();
-        saveToLocalStorage();
+        task.tracks[idx] = []; renderTimeline(); saveToLocalStorage();
       }
     }
 
     /* ==========================================================================
-       SAVE TIMELINE SEQUENCE AS .SPEECH DATA FILE
+       OPTION 1: UNIFIED .SFPROJ BUNDLE EXPORT & IMPORT
+       Encapsulates all 4 tracks, speech metadata, and base64 audio in one file
        ========================================================================== */
-    document.getElementById('btn-save-sequence').onclick = () => {
-      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
-      if (!task) return;
+    function blobToBase64(blob) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    }
 
-      const sequencePayload = {
-        format: "soundforge-sequence-data",
-        version: "1.0",
-        taskId: task.id,
-        taskName: task.name,
-        exportedAt: new Date().toISOString(),
-        trackSettings: appState.trackSettings,
-        tracks: task.tracks.map((track, trackIdx) => ({
-          trackIndex: trackIdx,
-          trackName: trackIdx === 0 ? "Speech" : trackIdx === 1 ? "SFX" : trackIdx === 2 ? "Foley" : "Ambience",
-          clips: track.map(clip => ({
+    document.getElementById('btn-export-bundle').onclick = async () => {
+      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
+      document.getElementById('export-status').innerText = 'Packing .sfproj bundle...';
+
+      const tracksData = await Promise.all(task.tracks.map(async (track, trackIdx) => {
+        const clipsData = await Promise.all(track.map(async (clip) => {
+          let base64Audio = null;
+          if (!clip.isSpeech && clip.bufferKey && bufferRegistry.has(clip.bufferKey)) {
+            const buf = bufferRegistry.get(clip.bufferKey);
+            const wavBlob = audioBufferToWavBlob(buf);
+            base64Audio = await blobToBase64(wavBlob);
+          }
+          return {
             id: clip.id,
             name: clip.name,
             start: clip.start,
             duration: clip.duration,
+            color: clip.color,
             isSpeech: !!clip.isSpeech,
             speechText: clip.speechText || "",
             voiceName: clip.voiceName || "",
-            voiceLang: clip.voiceLang || "en-AU"
-          }))
-        })),
-        // Flat speech clips convenience list
-        clips: (task.tracks[0] || []).filter(c => c.isSpeech).map(c => ({
-          text: c.speechText,
-          name: c.name,
-          start: c.start,
-          duration: c.duration,
-          voiceName: c.voiceName,
-          voiceLang: c.voiceLang
-        }))
+            voiceLang: clip.voiceLang || "en-AU",
+            audioData: base64Audio
+          };
+        }));
+
+        return {
+          trackIndex: trackIdx,
+          trackName: trackIdx === 0 ? "Speech" : trackIdx === 1 ? "SFX" : trackIdx === 2 ? "Foley" : "Ambience",
+          volume: appState.trackSettings[trackIdx].volume,
+          clips: clipsData
+        };
+      }));
+
+      const bundle = {
+        format: "soundforge-multitrack-bundle",
+        version: "1.0",
+        taskName: task.name,
+        exportedAt: new Date().toISOString(),
+        trackSettings: appState.trackSettings,
+        tracks: tracksData
       };
 
-      const jsonStr = JSON.stringify(sequencePayload, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const filename = `${task.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_sequence.speech`;
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 1000);
-
-      document.getElementById('export-status').innerText = `Saved ${filename}!`;
+      const jsonBlob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+      const filename = `${task.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.sfproj`;
+      triggerDownload(jsonBlob, filename);
+      document.getElementById('export-status').innerText = 'Exported .sfproj Bundle!';
       setTimeout(() => { document.getElementById('export-status').innerText = 'Ready'; }, 3000);
     };
 
-    /* ==========================================================================
-       OFFLINE AUDIO RENDERING & EXPORT (WAV & MP3)
-       ========================================================================== */
+    async function handleFileImport(file, targetTrack = 0) {
+      if (!file) return;
+
+      // Handle Unified .sfproj Bundle
+      if (file.name.endsWith('.sfproj') || file.name.endsWith('.json')) {
+        try {
+          const text = await file.text();
+          const json = JSON.parse(text);
+
+          if (json.format === "soundforge-multitrack-bundle" && json.tracks) {
+            document.getElementById('export-status').innerText = 'Loading bundle...';
+            stopPlayback();
+
+            const newTaskId = 'task_' + Date.now();
+            const newTracks = [[], [], [], []];
+
+            for (const t of json.tracks) {
+              const tIdx = t.trackIndex;
+              for (const c of t.clips) {
+                let bufferKey = null;
+                if (!c.isSpeech && c.audioData) {
+                  const res = await fetch(c.audioData);
+                  const ab = await res.arrayBuffer();
+                  const audioCtx = getAudioContext();
+                  const decoded = await audioCtx.decodeAudioData(ab);
+                  bufferKey = 'buf_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+                  bufferRegistry.set(bufferKey, decoded);
+                  await storeBufferInDB(bufferKey, decoded);
+                }
+
+                newTracks[tIdx].push({
+                  id: c.id || ('clip_' + Date.now()),
+                  name: c.name,
+                  start: c.start,
+                  duration: c.duration,
+                  color: c.color || (tIdx === 0 ? 'from-cyan-600 to-blue-700' : 'from-amber-600 to-yellow-600'),
+                  isSpeech: !!c.isSpeech,
+                  speechText: c.speechText || '',
+                  voiceName: c.voiceName || '',
+                  voiceLang: c.voiceLang || 'en-AU',
+                  bufferKey: bufferKey
+                });
+              }
+            }
+
+            appState.tasks.push({
+              id: newTaskId,
+              name: (json.taskName || 'Imported Scene') + ' (Bundle)',
+              tracks: newTracks
+            });
+            appState.activeTaskId = newTaskId;
+            if (json.trackSettings) appState.trackSettings = json.trackSettings;
+
+            renderTasks(); renderTimeline(); saveToLocalStorage();
+            document.getElementById('export-status').innerText = 'Loaded .sfproj Bundle!';
+            return;
+          }
+        } catch(err) { console.warn('Not bundle, attempting fallback...', err); }
+      }
+
+      // Standard Audio Import
+      document.getElementById('export-status').innerText = `Decoding ${file.name}...`;
+      try {
+        const ctx = getAudioContext();
+        const ab = await file.arrayBuffer();
+        const decoded = await ctx.decodeAudioData(ab);
+        const key = 'imported_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        bufferRegistry.set(key, decoded);
+        await storeBufferInDB(key, decoded);
+
+        appState.tasks.find(t => t.id === appState.activeTaskId).tracks[targetTrack].push({
+          id: 'clip_' + Date.now(), name: file.name.replace(/\.[^/.]+$/, ""), start: playheadTime,
+          duration: Math.min(decoded.duration, MAX_DURATION - playheadTime),
+          color: targetTrack === 0 ? 'from-cyan-600 to-blue-700' : 'from-indigo-600 to-purple-700',
+          bufferKey: key, isSpeech: false
+        });
+        renderTimeline(); saveToLocalStorage();
+        document.getElementById('export-status').innerText = 'Audio imported cleanly!';
+      } catch (err) { alert('Could not decode file.'); }
+    }
+
+    /* Offline Audio Mixdown & Encoders (WAV & MP3) */
     async function renderMixdownBuffer() {
       const task = appState.tasks.find(t => t.id === appState.activeTaskId);
       let maxEnd = 0;
-      task.tracks.forEach(track => {
-        track.forEach(clip => {
-          if (clip.start + clip.duration > maxEnd) maxEnd = clip.start + clip.duration;
-        });
-      });
+      task.tracks.forEach(track => { track.forEach(c => { if (c.start + c.duration > maxEnd) maxEnd = c.start + c.duration; }); });
+      if (maxEnd === 0) return alert('No clips on timeline to export.');
 
-      if (maxEnd === 0) {
-        alert('There are no clips in this task to export.');
-        return null;
-      }
-
-      const totalRenderTime = Math.min(MAX_DURATION, Math.max(maxEnd + 0.5, 1));
-      const sampleRate = 44100;
-      const offlineCtx = new OfflineAudioContext(2, Math.floor(sampleRate * totalRenderTime), sampleRate);
-
+      const offlineCtx = new OfflineAudioContext(2, Math.floor(44100 * (maxEnd + 0.5)), 44100);
       const anySolo = appState.trackSettings.some(ts => ts.solo);
-
       task.tracks.forEach((track, trackIdx) => {
-        const settings = appState.trackSettings[trackIdx];
-        const isMuted = settings.muted || (anySolo && !settings.solo);
-        if (isMuted) return;
-
+        const st = appState.trackSettings[trackIdx];
+        if (st.muted || (anySolo && !st.solo)) return;
         track.forEach(clip => {
           const buf = bufferRegistry.get(clip.bufferKey);
           if (!buf) return;
-
           const src = offlineCtx.createBufferSource();
           src.buffer = buf;
           const gain = offlineCtx.createGain();
-          gain.gain.value = settings.volume;
-
-          src.connect(gain);
-          gain.connect(offlineCtx.destination);
+          gain.gain.value = st.volume;
+          src.connect(gain); gain.connect(offlineCtx.destination);
           src.start(clip.start);
         });
       });
-
-      document.getElementById('export-status').innerText = 'Rendering audio mixdown...';
       return await offlineCtx.startRendering();
     }
 
     function audioBufferToWavBlob(buffer) {
-      const numOfChan = buffer.numberOfChannels;
-      const length = buffer.length * numOfChan * 2 + 44;
+      const numChan = buffer.numberOfChannels;
+      const length = buffer.length * numChan * 2 + 44;
       const out = new DataView(new ArrayBuffer(length));
-      const channels = [];
-      let sample = 0;
-      let offset = 0;
       let pos = 0;
+      const set16 = (d) => { out.setUint16(pos, d, true); pos += 2; };
+      const set32 = (d) => { out.setUint32(pos, d, true); pos += 4; };
+      set32(0x46464952); set32(length - 8); set32(0x45564157); set32(0x20746d66);
+      set32(16); set16(1); set16(numChan); set32(buffer.sampleRate);
+      set32(buffer.sampleRate * 2 * numChan); set16(numChan * 2); set16(16);
+      set32(0x61746164); set32(length - pos - 4);
 
-      function setUint16(data) { out.setUint16(pos, data, true); pos += 2; }
-      function setUint32(data) { out.setUint32(pos, data, true); pos += 4; }
-
-      setUint32(0x46464952); // "RIFF"
-      setUint32(length - 8);
-      setUint32(0x45564157); // "WAVE"
-      setUint32(0x20746d66); // "fmt "
-      setUint32(16);          // 16-bit
-      setUint16(1);           // Linear PCM
-      setUint16(numOfChan);
-      setUint32(buffer.sampleRate);
-      setUint32(buffer.sampleRate * 2 * numOfChan);
-      setUint16(numOfChan * 2);
-      setUint16(16);          // 16-bit
-      setUint32(0x61746164); // "data"
-      setUint32(length - pos - 4);
-
-      for (let i = 0; i < buffer.numberOfChannels; i++) {
-        channels.push(buffer.getChannelData(i));
-      }
-
-      while (offset < buffer.length) {
-        for (let i = 0; i < numOfChan; i++) {
-          sample = Math.max(-1, Math.min(1, channels[i][offset]));
-          sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-          out.setInt16(pos, sample, true);
+      const ch = [buffer.getChannelData(0), numChan > 1 ? buffer.getChannelData(1) : buffer.getChannelData(0)];
+      for (let i = 0; i < buffer.length; i++) {
+        for (let c = 0; c < numChan; c++) {
+          let s = Math.max(-1, Math.min(1, ch[c][i]));
+          out.setInt16(pos, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
           pos += 2;
         }
-        offset++;
       }
-
       return new Blob([out.buffer], { type: 'audio/wav' });
     }
 
     function audioBufferToMp3Blob(buffer) {
       const channels = buffer.numberOfChannels;
-      const sampleRate = buffer.sampleRate;
-      const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, 192);
+      const encoder = new lamejs.Mp3Encoder(channels, buffer.sampleRate, 192);
       const mp3Data = [];
-
-      const left = buffer.getChannelData(0);
-      const right = channels > 1 ? buffer.getChannelData(1) : left;
-      const sampleBlockSize = 1152;
-
-      const leftInt16 = new Int16Array(left.length);
-      const rightInt16 = new Int16Array(right.length);
-
-      for (let i = 0; i < left.length; i++) {
-        leftInt16[i] = Math.max(-32768, Math.min(32767, left[i] * 32767));
-        rightInt16[i] = Math.max(-32768, Math.min(32767, right[i] * 32767));
+      const l = buffer.getChannelData(0), r = channels > 1 ? buffer.getChannelData(1) : l;
+      const l16 = new Int16Array(l.length), r16 = new Int16Array(r.length);
+      for (let i = 0; i < l.length; i++) {
+        l16[i] = Math.max(-32768, Math.min(32767, l[i] * 32767));
+        r16[i] = Math.max(-32768, Math.min(32767, r[i] * 32767));
       }
-
-      for (let i = 0; i < leftInt16.length; i += sampleBlockSize) {
-        const leftChunk = leftInt16.subarray(i, i + sampleBlockSize);
-        const rightChunk = rightInt16.subarray(i, i + sampleBlockSize);
-        const mp3buf = channels === 2 
-          ? mp3encoder.encodeBuffer(leftChunk, rightChunk) 
-          : mp3encoder.encodeBuffer(leftChunk);
-        if (mp3buf.length > 0) mp3Data.push(mp3buf);
+      for (let i = 0; i < l16.length; i += 1152) {
+        const buf = channels === 2 ? encoder.encodeBuffer(l16.subarray(i, i+1152), r16.subarray(i, i+1152)) : encoder.encodeBuffer(l16.subarray(i, i+1152));
+        if (buf.length > 0) mp3Data.push(buf);
       }
-
-      const endBuf = mp3encoder.flush();
-      if (endBuf.length > 0) mp3Data.push(endBuf);
-
+      const end = encoder.flush();
+      if (end.length > 0) mp3Data.push(end);
       return new Blob(mp3Data, { type: 'audio/mp3' });
+    }
+
+    function triggerDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
     }
 
     document.getElementById('btn-export-wav').onclick = async () => {
       const rendered = await renderMixdownBuffer();
       if (!rendered) return;
-      const blob = audioBufferToWavBlob(rendered);
-      const activeTask = appState.tasks.find(t => t.id === appState.activeTaskId);
-      const filename = `${activeTask.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.wav`;
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      document.getElementById('export-status').innerText = 'Exported WAV successfully!';
+      triggerDownload(audioBufferToWavBlob(rendered), `${appState.tasks.find(t=>t.id===appState.activeTaskId).name.toLowerCase().replace(/[^a-z0-9]/g, '_')}.wav`);
     };
 
     document.getElementById('btn-export-mp3').onclick = async () => {
       const rendered = await renderMixdownBuffer();
       if (!rendered) return;
-      const blob = audioBufferToMp3Blob(rendered);
-      const activeTask = appState.tasks.find(t => t.id === appState.activeTaskId);
-      const filename = `${activeTask.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
+      triggerDownload(audioBufferToMp3Blob(rendered), `${appState.tasks.find(t=>t.id===appState.activeTaskId).name.toLowerCase().replace(/[^a-z0-9]/g, '_')}.mp3`);
+    };
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      document.getElementById('export-status').innerText = 'Exported MP3 successfully!';
+    /* Procedural Adders */
+    document.getElementById('btn-preview-foley').onclick = () => {
+      previewBuffer(generateFoleyBuffer(document.getElementById('foley-type-select').value, parseFloat(document.getElementById('foley-damp').value)));
+    };
+    document.getElementById('btn-add-foley').onclick = async () => {
+      const buf = generateFoleyBuffer(document.getElementById('foley-type-select').value, parseFloat(document.getElementById('foley-damp').value));
+      const key = 'foley_' + Date.now();
+      bufferRegistry.set(key, buf); await storeBufferInDB(key, buf);
+      appState.tasks.find(t => t.id === appState.activeTaskId).tracks[2].push({
+        id: 'clip_' + Date.now(), name: 'Foley: ' + document.getElementById('foley-type-select').value, start: playheadTime, duration: buf.duration, color: 'from-orange-600 to-amber-700', bufferKey: key, isSpeech: false
+      });
+      renderTimeline(); saveToLocalStorage();
+    };
+    document.getElementById('btn-preview-ambience').onclick = () => {
+      previewBuffer(generateAmbienceBuffer(document.getElementById('ambience-type-select').value, 3));
+    };
+    document.getElementById('btn-add-ambience').onclick = async () => {
+      const buf = generateAmbienceBuffer(document.getElementById('ambience-type-select').value, parseFloat(document.getElementById('ambience-dur').value));
+      const key = 'ambience_' + Date.now();
+      bufferRegistry.set(key, buf); await storeBufferInDB(key, buf);
+      appState.tasks.find(t => t.id === appState.activeTaskId).tracks[3].push({
+        id: 'clip_' + Date.now(), name: 'Ambience: ' + document.getElementById('ambience-type-select').value, start: playheadTime, duration: buf.duration, color: 'from-emerald-700 to-teal-800', bufferKey: key, isSpeech: false
+      });
+      renderTimeline(); saveToLocalStorage();
     };
 
     window.switchSidebarTab = function(tabName) {
       ['sfx', 'foley', 'ambience'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tabName);
-        const btn = document.getElementById(`tab-btn-${t}`);
-        if (t === tabName) {
-          btn.className = 'flex-1 py-2.5 text-center text-cyan-400 border-b-2 border-cyan-400 transition';
-        } else {
-          btn.className = 'flex-1 py-2.5 text-center text-slate-400 hover:text-white transition';
-        }
+        document.getElementById(`tab-btn-${t}`).className = t === tabName ? 'flex-1 py-2.5 text-center text-cyan-400 border-b-2 border-cyan-400 transition' : 'flex-1 py-2.5 text-center text-slate-400 hover:text-white transition';
       });
     };
 
-    document.getElementById('btn-preview-foley').onclick = () => {
-      const type = document.getElementById('foley-type-select').value;
-      const damp = parseFloat(document.getElementById('foley-damp').value);
-      previewBuffer(generateFoleyBuffer(type, damp));
-    };
-
-    document.getElementById('btn-add-foley').onclick = async () => {
-      const type = document.getElementById('foley-type-select').value;
-      const damp = parseFloat(document.getElementById('foley-damp').value);
-      const buf = generateFoleyBuffer(type, damp);
-      const bufferKey = 'foley_' + Date.now();
-      
-      bufferRegistry.set(bufferKey, buf);
-      await storeBufferInDB(bufferKey, buf);
-
-      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
-      task.tracks[2].push({
-        id: 'clip_' + Date.now(),
-        name: 'Foley: ' + type,
-        start: playheadTime,
-        duration: buf.duration,
-        color: 'from-orange-600 to-amber-700',
-        bufferKey: bufferKey,
-        isSpeech: false
-      });
-      renderTimeline();
-      saveToLocalStorage();
-    };
-
-    document.getElementById('btn-preview-ambience').onclick = () => {
-      const type = document.getElementById('ambience-type-select').value;
-      previewBuffer(generateAmbienceBuffer(type, 3));
-    };
-
-    document.getElementById('btn-add-ambience').onclick = async () => {
-      const type = document.getElementById('ambience-type-select').value;
-      const dur = parseFloat(document.getElementById('ambience-dur').value);
-      const buf = generateAmbienceBuffer(type, dur);
-      const bufferKey = 'ambience_' + Date.now();
-      
-      bufferRegistry.set(bufferKey, buf);
-      await storeBufferInDB(bufferKey, buf);
-
-      const task = appState.tasks.find(t => t.id === appState.activeTaskId);
-      task.tracks[3].push({
-        id: 'clip_' + Date.now(),
-        name: 'Ambience: ' + type,
-        start: playheadTime,
-        duration: buf.duration,
-        color: 'from-emerald-700 to-teal-800',
-        bufferKey: bufferKey,
-        isSpeech: false
-      });
-      renderTimeline();
-      saveToLocalStorage();
-    };
-
-    /* ==========================================================================
-       INIT
-       ========================================================================== */
     window.addEventListener('DOMContentLoaded', async () => {
       await openDatabase();
       await loadFromLocalStorage();
       document.getElementById('btn-add-task').onclick = addNewTask;
-      renderTasks();
-      drawRuler();
-      renderSfxList();
-      renderTimeline();
-      updateTrackButtons();
-      setupDragAndDrop();
+      renderTasks(); drawRuler(); renderSfxList(); renderTimeline(); updateTrackButtons(); setupDragAndDrop();
     });
   </script>
 </body>
