@@ -32,7 +32,7 @@
       </div>
       <div>
         <h1 class="font-bold text-base text-white tracking-wide flex items-center gap-2">
-          SoundForge DAW <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v4.0 PRO</span>
+          SoundForge DAW <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v4.1 PRO</span>
         </h1>
         <p class="text-xs text-slate-400" id="current-task-display">Active Task: Task 1</p>
       </div>
@@ -130,9 +130,7 @@
         <!-- TAB CONTENT 1: SFX LIBRARY -->
         <div id="tab-sfx" class="flex-1 overflow-y-auto p-3 space-y-2">
           <div class="text-[11px] text-slate-400 mb-1">Click to preview, or add directly to target track:</div>
-          <div id="sfx-items-container" class="space-y-2">
-            <!-- Rendered by JS -->
-          </div>
+          <div id="sfx-items-container" class="space-y-2"></div>
         </div>
 
         <!-- TAB CONTENT 2: PROCEDURAL FOLEY GENERATOR -->
@@ -237,7 +235,6 @@
 
           <!-- TRACK 1: SPEECH & DIALOGUE -->
           <div class="h-28 bg-[#161b22] rounded-lg border border-[#30363d] flex relative overflow-hidden track-lane" data-track-id="0">
-            <!-- Track Control Header -->
             <div class="w-48 bg-[#0d1117] border-r border-[#30363d] p-2 flex flex-col justify-between flex-shrink-0 z-10">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-cyan-400 flex items-center gap-1.5 truncate">
@@ -257,7 +254,6 @@
                 </div>
               </div>
             </div>
-            <!-- Track Lane Blocks -->
             <div class="flex-1 relative timeline-grid h-full overflow-hidden track-drop-target" data-track-id="0"></div>
           </div>
 
@@ -350,14 +346,13 @@
     </main>
   </div>
 
-  <!-- SCRIPT LOGIC -->
   <script>
     /* ==========================================================================
        GLOBAL STATE & CONFIGURATION
        ========================================================================== */
-    const MAX_DURATION = 180; // 3 minutes in seconds
-    const PIXELS_PER_SECOND = 20; // 1 second = 20 pixels
-    const TOTAL_WIDTH = MAX_DURATION * PIXELS_PER_SECOND; // 3600px width
+    const MAX_DURATION = 180;
+    const PIXELS_PER_SECOND = 20;
+    const TOTAL_WIDTH = MAX_DURATION * PIXELS_PER_SECOND;
 
     let audioCtx = null;
     function getAudioContext() {
@@ -370,14 +365,13 @@
       return audioCtx;
     }
 
-    // Task & Clip Data Schema
     let appState = {
       activeTaskId: 'task_1',
       tasks: [
         {
           id: 'task_1',
           name: 'Task 1: Episode Intro',
-          tracks: [[], [], [], []] // 4 tracks
+          tracks: [[], [], [], []]
         }
       ],
       trackSettings: [
@@ -388,17 +382,76 @@
       ]
     };
 
-    // Buffer store for synthesized/imported clips
     const bufferRegistry = new Map();
     let isPlaying = false;
     let playheadTime = 0;
     let playbackStartTime = 0;
     let activeNodes = [];
     let animationFrameId = null;
-    let selectedClip = null;
 
     /* ==========================================================================
-       LOCAL STORAGE PERSISTENCE
+       INDEXED-DB AUDIO STORAGE (PREVENTS CORRUPT / GHOST AUDIO ON RELOAD)
+       ========================================================================== */
+    let dbInstance = null;
+    function openDatabase() {
+      return new Promise((resolve) => {
+        const req = indexedDB.open('SoundForgeAudioDB_v1', 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('audioBuffers')) {
+            db.createObjectStore('audioBuffers', { keyPath: 'key' });
+          }
+        };
+        req.onsuccess = (e) => {
+          dbInstance = e.target.result;
+          resolve(dbInstance);
+        };
+        req.onerror = () => resolve(null);
+      });
+    }
+
+    async function storeBufferInDB(key, buffer) {
+      if (!dbInstance) await openDatabase();
+      if (!dbInstance) return;
+
+      const channelsData = [];
+      for (let i = 0; i < buffer.numberOfChannels; i++) {
+        channelsData.push(buffer.getChannelData(i));
+      }
+
+      const tx = dbInstance.transaction('audioBuffers', 'readwrite');
+      tx.objectStore('audioBuffers').put({
+        key: key,
+        sampleRate: buffer.sampleRate,
+        numberOfChannels: buffer.numberOfChannels,
+        length: buffer.length,
+        channels: channelsData
+      });
+    }
+
+    async function loadBufferFromDB(key) {
+      if (!dbInstance) await openDatabase();
+      if (!dbInstance) return null;
+
+      return new Promise((resolve) => {
+        const tx = dbInstance.transaction('audioBuffers', 'readonly');
+        const req = tx.objectStore('audioBuffers').get(key);
+        req.onsuccess = () => {
+          const res = req.result;
+          if (!res) return resolve(null);
+          const ctx = getAudioContext();
+          const buf = ctx.createBuffer(res.numberOfChannels, res.length, res.sampleRate);
+          for (let i = 0; i < res.numberOfChannels; i++) {
+            buf.copyToChannel(res.channels[i], i);
+          }
+          resolve(buf);
+        };
+        req.onerror = () => resolve(null);
+      });
+    }
+
+    /* ==========================================================================
+       LOCAL STORAGE & STATE REHYDRATION
        ========================================================================== */
     function saveToLocalStorage() {
       try {
@@ -424,7 +477,7 @@
       }
     }
 
-    function loadFromLocalStorage() {
+    async function loadFromLocalStorage() {
       const data = localStorage.getItem('soundforge_v4_state');
       if (data) {
         try {
@@ -433,6 +486,18 @@
             appState.tasks = parsed.tasks;
             appState.activeTaskId = parsed.activeTaskId || parsed.tasks[0].id;
             if (parsed.trackSettings) appState.trackSettings = parsed.trackSettings;
+
+            // Rehydrate buffers from IndexedDB
+            for (const task of appState.tasks) {
+              for (const track of task.tracks) {
+                for (const clip of track) {
+                  if (clip.bufferKey && !bufferRegistry.has(clip.bufferKey)) {
+                    const restored = await loadBufferFromDB(clip.bufferKey);
+                    if (restored) bufferRegistry.set(clip.bufferKey, restored);
+                  }
+                }
+              }
+            }
           }
         } catch (e) {
           console.error('Failed to parse state:', e);
@@ -441,7 +506,7 @@
     }
 
     /* ==========================================================================
-       TASK MANAGEMENT OPERATIONS (ADD, SWITCH, RENAME, DUPLICATE, DELETE)
+       TASK MANAGEMENT OPERATIONS
        ========================================================================== */
     function renderTasks() {
       const listEl = document.getElementById('task-list');
@@ -573,7 +638,6 @@
 
       generatorFn(ch0, ch1, sampleRate, numFrames);
 
-      // Apply 10ms smooth cosine envelope at boundaries to prevent clicks
       const fadeFrames = Math.min(Math.floor(sampleRate * 0.01), Math.floor(numFrames / 4));
       for (let i = 0; i < fadeFrames; i++) {
         const mult = 0.5 * (1 - Math.cos((Math.PI * i) / fadeFrames));
@@ -633,7 +697,7 @@
         generate: () => createAntiClickBuffer(0.4, (c0, c1, sr, len) => {
           for (let i = 0; i < len; i++) {
             const t = i / sr;
-            const f = t < 0.1 ? 987.77 : 1318.51; // B5 to E6
+            const f = t < 0.1 ? 987.77 : 1318.51;
             const val = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 7);
             c0[i] = val * 0.5;
             c1[i] = val * 0.5;
@@ -692,7 +756,6 @@
             c0[i] = sub + pad;
             c1[i] = sub + pad;
           } else {
-            // Wind / air
             const n = Math.random() * 2 - 1;
             f0 += 0.02 * (n - f0);
             f1 += 0.02 * (n - f1);
@@ -743,12 +806,14 @@
       if (def) previewBuffer(def.generate());
     }
 
-    function addSfxToTrack(defId, trackIdx) {
+    async function addSfxToTrack(defId, trackIdx) {
       const def = SFX_DEFINITIONS.find(d => d.id === defId);
       if (!def) return;
       const buf = def.generate();
       const bufferKey = 'buf_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      
       bufferRegistry.set(bufferKey, buf);
+      await storeBufferInDB(bufferKey, buf);
 
       const task = appState.tasks.find(t => t.id === appState.activeTaskId);
       task.tracks[trackIdx].push({
@@ -773,10 +838,13 @@
       try {
         const ctx = getAudioContext();
         const arrayBuffer = await file.arrayBuffer();
+        
+        // Accurate browser decode (WAV, MP3, OGG, WebM)
         const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
 
         const bufferKey = 'imported_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
         bufferRegistry.set(bufferKey, decodedBuffer);
+        await storeBufferInDB(bufferKey, decodedBuffer);
 
         const task = appState.tasks.find(t => t.id === appState.activeTaskId);
         task.tracks[targetTrack].push({
@@ -798,7 +866,6 @@
       }
     }
 
-    // Setup Drag-and-drop on zone and timeline lanes
     function setupDragAndDrop() {
       const dropzone = document.getElementById('dropzone');
       const importInput = document.getElementById('import-audio-input');
@@ -829,7 +896,6 @@
         }
       });
 
-      // Allow dragging files directly onto any timeline track
       document.querySelectorAll('.track-drop-target').forEach(lane => {
         lane.addEventListener('dragover', (e) => e.preventDefault());
         lane.addEventListener('drop', (e) => {
@@ -847,7 +913,6 @@
        ========================================================================== */
     function drawRuler() {
       const canvas = document.getElementById('ruler-canvas');
-      const container = document.getElementById('ruler-container');
       const dpr = window.devicePixelRatio || 1;
       canvas.width = TOTAL_WIDTH * dpr;
       canvas.height = 32 * dpr;
@@ -919,7 +984,6 @@
             </button>
           `;
 
-          // Draggable positioning
           let isDragging = false;
           let startX = 0;
           let initialLeft = leftPx;
@@ -992,7 +1056,6 @@
       }
     }
 
-    /* Transport button listeners */
     document.getElementById('btn-jump-start').onclick = () => seekTo(0);
     document.getElementById('btn-step-back-5').onclick = () => seekTo(playheadTime - 5);
     document.getElementById('btn-step-back-1').onclick = () => seekTo(playheadTime - 1);
@@ -1080,7 +1143,6 @@
       else startPlayback();
     };
 
-    /* Keyboard Shortcuts */
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.code === 'Space') {
@@ -1097,7 +1159,6 @@
       }
     });
 
-    /* Track Volume / Mute / Solo Controls */
     function setTrackVolume(idx, val) {
       appState.trackSettings[idx].volume = parseFloat(val);
       saveToLocalStorage();
@@ -1184,7 +1245,6 @@
       return await offlineCtx.startRendering();
     }
 
-    // WAV 16-bit PCM Encoder
     function audioBufferToWavBlob(buffer) {
       const numOfChan = buffer.numberOfChannels;
       const length = buffer.length * numOfChan * 2 + 44;
@@ -1197,18 +1257,17 @@
       function setUint16(data) { out.setUint16(pos, data, true); pos += 2; }
       function setUint32(data) { out.setUint32(pos, data, true); pos += 4; }
 
-      // Write WAV Header
       setUint32(0x46464952); // "RIFF"
       setUint32(length - 8);
       setUint32(0x45564157); // "WAVE"
       setUint32(0x20746d66); // "fmt " chunk
-      setUint32(16);         // length = 16
-      setUint16(1);          // PCM (uncompressed)
+      setUint32(16);          // length = 16
+      setUint16(1);           // PCM (uncompressed)
       setUint16(numOfChan);
       setUint32(buffer.sampleRate);
       setUint32(buffer.sampleRate * 2 * numOfChan);
       setUint16(numOfChan * 2);
-      setUint16(16);         // 16-bit
+      setUint16(16);          // 16-bit
       setUint32(0x61746164); // "data" chunk
       setUint32(length - pos - 4);
 
@@ -1229,7 +1288,6 @@
       return new Blob([out.buffer], { type: 'audio/wav' });
     }
 
-    // MP3 LameJS Encoder
     function audioBufferToMp3Blob(buffer) {
       const channels = buffer.numberOfChannels;
       const sampleRate = buffer.sampleRate;
@@ -1293,7 +1351,6 @@
       document.getElementById('export-status').innerText = 'Exported MP3 successfully!';
     };
 
-    /* Tab switcher for left sidebar */
     window.switchSidebarTab = function(tabName) {
       ['sfx', 'foley', 'ambience'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tabName);
@@ -1306,19 +1363,20 @@
       });
     };
 
-    /* Procedural Foley/Ambience bindings */
     document.getElementById('btn-preview-foley').onclick = () => {
       const type = document.getElementById('foley-type-select').value;
       const damp = parseFloat(document.getElementById('foley-damp').value);
       previewBuffer(generateFoleyBuffer(type, damp));
     };
 
-    document.getElementById('btn-add-foley').onclick = () => {
+    document.getElementById('btn-add-foley').onclick = async () => {
       const type = document.getElementById('foley-type-select').value;
       const damp = parseFloat(document.getElementById('foley-damp').value);
       const buf = generateFoleyBuffer(type, damp);
       const bufferKey = 'foley_' + Date.now();
+      
       bufferRegistry.set(bufferKey, buf);
+      await storeBufferInDB(bufferKey, buf);
 
       const task = appState.tasks.find(t => t.id === appState.activeTaskId);
       task.tracks[2].push({
@@ -1338,12 +1396,14 @@
       previewBuffer(generateAmbienceBuffer(type, 3));
     };
 
-    document.getElementById('btn-add-ambience').onclick = () => {
+    document.getElementById('btn-add-ambience').onclick = async () => {
       const type = document.getElementById('ambience-type-select').value;
       const dur = parseFloat(document.getElementById('ambience-dur').value);
       const buf = generateAmbienceBuffer(type, dur);
       const bufferKey = 'ambience_' + Date.now();
+      
       bufferRegistry.set(bufferKey, buf);
+      await storeBufferInDB(bufferKey, buf);
 
       const task = appState.tasks.find(t => t.id === appState.activeTaskId);
       task.tracks[3].push({
@@ -1361,8 +1421,9 @@
     /* ==========================================================================
        INIT
        ========================================================================== */
-    window.addEventListener('DOMContentLoaded', () => {
-      loadFromLocalStorage();
+    window.addEventListener('DOMContentLoaded', async () => {
+      await openDatabase();
+      await loadFromLocalStorage();
       document.getElementById('btn-add-task').onclick = addNewTask;
       renderTasks();
       drawRuler();
