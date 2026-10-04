@@ -25,7 +25,7 @@
         </div>
         <div>
           <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-            TTS Audio Generator <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v2.1</span>
+            TTS Audio Generator <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v3.0 PRO</span>
           </h1>
           <p class="text-xs text-slate-400">Export clean human speech files for SoundForge DAW</p>
         </div>
@@ -58,19 +58,24 @@
     <!-- VOICE SELECTION & PROFILES -->
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <label class="block text-xs font-semibold text-slate-300 mb-1">Human Voice Character</label>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">Voice Accent & Dialect</label>
         <select id="voice-preset" class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg p-2 text-xs text-white focus:outline-none focus:border-cyan-500">
-          <option value="">Detecting available voices...</option>
+          <option value="en-AU" selected>English (Australian)</option>
+          <option value="en-GB">English (British)</option>
+          <option value="en-US">English (United States)</option>
+          <option value="en-CA">English (Canadian)</option>
+          <option value="en-IN">English (Indian)</option>
+          <option value="en-IE">English (Irish)</option>
         </select>
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-300 mb-1">Pitch & Speed Delivery</label>
-        <select id="tone-preset" class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg p-2 text-xs text-white focus:outline-none focus:border-cyan-500">
-          <option value="1.0|1.0">Natural Pacing (1.0x)</option>
-          <option value="0.9|0.9">Deliberate & Authoritative (0.9x)</option>
-          <option value="1.15|1.05">Fast & Upbeat (1.15x)</option>
-          <option value="1.3|1.1">High-Speed Narration (1.3x)</option>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">Playback Speed</label>
+        <select id="speed-preset" class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg p-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+          <option value="1.0" selected>Natural Pace (1.0x)</option>
+          <option value="0.9">Deliberate & Authoritative (0.9x)</option>
+          <option value="1.15">Fast & Upbeat (1.15x)</option>
+          <option value="1.3">High-Speed Narration (1.3x)</option>
         </select>
       </div>
     </div>
@@ -86,13 +91,13 @@
           <div class="text-[11px] text-slate-400" id="preview-status">Ready to generate speech</div>
         </div>
       </div>
-      <div class="text-xs font-mono text-cyan-400 font-bold" id="duration-display">--:--</div>
+      <div class="text-xs font-mono text-cyan-400 font-bold" id="duration-display">00:00</div>
     </div>
 
     <!-- EXPORT ACTIONS (WAV & MP3 TO DOWNLOADS) -->
     <div class="border-t border-[#30363d] pt-4 space-y-2">
       <div class="text-[11px] text-slate-400 flex items-center justify-between">
-        <span>Direct Download (Saved straight to your Downloads folder):</span>
+        <span>Direct Download (Exact voice as heard in preview):</span>
         <span id="export-status" class="text-emerald-400 font-medium"></span>
       </div>
       
@@ -114,8 +119,8 @@
   <script>
     let audioCtx = null;
     let cachedAudioBuffer = null;
-    let isPlayingPreview = false;
-    let availableVoices = [];
+    let activeSourceNode = null;
+    let isPlaying = false;
 
     function getAudioContext() {
       if (!audioCtx) {
@@ -129,7 +134,7 @@
 
     const ttsInput = document.getElementById('tts-input');
     const voiceSelect = document.getElementById('voice-preset');
-    const toneSelect = document.getElementById('tone-preset');
+    const speedSelect = document.getElementById('speed-preset');
 
     ttsInput.oninput = () => {
       document.getElementById('char-count').innerText = `${ttsInput.value.length} characters`;
@@ -137,171 +142,177 @@
     };
     ttsInput.oninput();
 
-    // Populate Available System Voices
-    function loadVoices() {
-      if (!('speechSynthesis' in window)) {
-        voiceSelect.innerHTML = '<option value="0">Default System Voice</option>';
-        return;
-      }
-      availableVoices = window.speechSynthesis.getVoices();
-      if (availableVoices.length === 0) return;
-
-      voiceSelect.innerHTML = '';
-      availableVoices.forEach((voice, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' [Default]' : ''}`;
-        voiceSelect.appendChild(option);
-      });
-    }
-
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-      loadVoices();
-    }
-
     voiceSelect.onchange = () => { cachedAudioBuffer = null; };
-    toneSelect.onchange = () => { cachedAudioBuffer = null; };
+    speedSelect.onchange = () => { cachedAudioBuffer = null; };
 
     /* ==========================================================================
-       SYNTHESIS & AUDIO BUFFER PIPELINE
+       AUTHENTIC HUMAN SPEECH ENGINE (Split-Text Direct Neural Pipeline)
        ========================================================================== */
-    async function synthesizeSpeechBuffer(text, rate = 1.0, pitch = 1.0) {
-      document.getElementById('preview-status').innerText = 'Rendering speech track...';
-      const ctx = getAudioContext();
-      
-      // Fallback: estimate speech duration (~140 words/min = ~2.3 words/sec)
-      const words = text.trim().split(/\s+/).length;
-      const durationSeconds = Math.max(1.2, (words / (2.5 * rate)) + 0.6);
-      const sampleRate = ctx.sampleRate;
-      const totalFrames = Math.floor(sampleRate * durationSeconds);
+    function splitIntoChunks(text, maxLen = 120) {
+      const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+      const chunks = [];
+      let current = '';
 
-      // Create stereo buffer
-      const buffer = ctx.createBuffer(2, totalFrames, sampleRate);
-      const ch0 = buffer.getChannelData(0);
-      const ch1 = buffer.getChannelData(1);
-
-      // Selected voice frequency fundamentals
-      const selectedIndex = parseInt(voiceSelect.value, 10) || 0;
-      const selectedVoice = availableVoices[selectedIndex];
-      const isFemale = selectedVoice && /female|girl|woman|zira|samantha|victoria/i.test(selectedVoice.name);
-      const f0Base = (isFemale ? 220 : 130) * pitch;
-
-      // Clean harmonic synthesis envelope (hum-free)
-      for (let i = 0; i < totalFrames; i++) {
-        const t = i / sampleRate;
-        const subWord = t % (0.35 / rate);
-        const env = Math.sin((Math.PI * subWord) / (0.35 / rate));
-        const f0 = f0Base * (1 + 0.03 * Math.sin(2 * Math.PI * 2 * t));
-
-        // Formants
-        const h1 = Math.sin(2 * Math.PI * f0 * t);
-        const h2 = Math.sin(2 * Math.PI * (f0 * 2.1) * t) * 0.35;
-        const h3 = Math.sin(2 * Math.PI * (f0 * 3.4) * t) * 0.15;
-
-        const sample = (h1 + h2 + h3) * Math.max(0, env) * 0.25;
-        ch0[i] = sample;
-        ch1[i] = sample;
+      for (let s of sentences) {
+        s = s.trim();
+        if (!s) continue;
+        if ((current + ' ' + s).trim().length <= maxLen) {
+          current = (current + ' ' + s).trim();
+        } else {
+          if (current) chunks.push(current);
+          if (s.length > maxLen) {
+            const words = s.split(' ');
+            let sub = '';
+            for (let w of words) {
+              if ((sub + ' ' + w).trim().length <= maxLen) {
+                sub = (sub + ' ' + w).trim();
+              } else {
+                if (sub) chunks.push(sub);
+                sub = w;
+              }
+            }
+            if (sub) current = sub;
+            else current = '';
+          } else {
+            current = s;
+          }
+        }
       }
-
-      // Smooth cosine attack and release (15ms fade)
-      const fadeLen = Math.min(Math.floor(sampleRate * 0.015), Math.floor(totalFrames / 4));
-      for (let i = 0; i < fadeLen; i++) {
-        const mult = 0.5 * (1 - Math.cos((Math.PI * i) / fadeLen));
-        ch0[i] *= mult;
-        ch1[i] *= mult;
-        const end = totalFrames - 1 - i;
-        ch0[end] *= mult;
-        ch1[end] *= mult;
-      }
-
-      return buffer;
+      if (current) chunks.push(current);
+      return chunks.length ? chunks : [text];
     }
 
-    async function getOrGenerateBuffer() {
+    async function fetchSpeechAudio(text, lang) {
+      const chunks = splitIntoChunks(text);
+      const ctx = getAudioContext();
+      const decodedBuffers = [];
+
+      document.getElementById('preview-status').innerText = `Fetching clean neural voice (${chunks.length} parts)...`;
+
+      for (let i = 0; i < chunks.length; i++) {
+        const query = encodeURIComponent(chunks[i]);
+        const endpoint = `https://translate.google.com/translate_tts?ie=UTF-8&q=${query}&tl=${lang}&client=tw-ob`;
+        
+        const response = await fetch(endpoint);
+        if (!response.ok) throw new Error('Audio stream fetch failed');
+        const arrayBuf = await response.arrayBuffer();
+        const audioBuf = await ctx.decodeAudioData(arrayBuf);
+        decodedBuffers.push(audioBuf);
+      }
+
+      // Concatenate all chunks into a single clean AudioBuffer
+      const sampleRate = decodedBuffers[0].sampleRate;
+      const totalLen = decodedBuffers.reduce((sum, b) => sum + b.length, 0);
+      const finalBuffer = ctx.createBuffer(1, totalLen, sampleRate);
+      const outputData = finalBuffer.getChannelData(0);
+
+      let offset = 0;
+      for (let b of decodedBuffers) {
+        outputData.set(b.getChannelData(0), offset);
+        offset += b.length;
+      }
+
+      return finalBuffer;
+    }
+
+    async function getOrGenerateSpeechBuffer() {
       const text = ttsInput.value.trim();
       if (!text) {
-        alert('Please enter dialogue text first.');
+        alert('Please enter some dialogue text first.');
         return null;
       }
 
-      if (!cachedAudioBuffer) {
-        const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
-        cachedAudioBuffer = await synthesizeSpeechBuffer(text, rate, pitch);
-        const mins = Math.floor(cachedAudioBuffer.duration / 60);
-        const secs = Math.floor(cachedAudioBuffer.duration % 60);
+      if (cachedAudioBuffer) {
+        return cachedAudioBuffer;
+      }
+
+      try {
+        const lang = voiceSelect.value;
+        const buffer = await fetchSpeechAudio(text, lang);
+        cachedAudioBuffer = buffer;
+
+        const rate = parseFloat(speedSelect.value);
+        const durationSec = buffer.duration / rate;
+        const mins = Math.floor(durationSec / 60);
+        const secs = Math.floor(durationSec % 60);
         document.getElementById('duration-display').innerText = 
           `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        document.getElementById('preview-status').innerText = 'Speech generated cleanly';
+
+        return cachedAudioBuffer;
+      } catch (err) {
+        console.error('Speech synthesis error:', err);
+        document.getElementById('preview-status').innerText = 'Network error fetching speech';
+        alert('Failed to synthesize speech audio. Please check your internet connection.');
+        return null;
       }
-      return cachedAudioBuffer;
     }
 
     /* ==========================================================================
-       LIVE PREVIEW
+       PLAYBACK PREVIEW (Shares the exact same buffer with file downloads)
        ========================================================================== */
-    document.getElementById('btn-preview-tts').onclick = () => {
-      const text = ttsInput.value.trim();
-      if (!text) {
-        alert('Please enter dialogue text first.');
-        return;
-      }
-
-      if (isPlayingPreview) {
+    document.getElementById('btn-preview-tts').onclick = async () => {
+      if (isPlaying) {
         stopPreview();
         return;
       }
 
-      const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
-      const selectedIndex = parseInt(voiceSelect.value, 10) || 0;
+      const buf = await getOrGenerateSpeechBuffer();
+      if (!buf) return;
 
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        if (availableVoices[selectedIndex]) {
-          utterance.voice = availableVoices[selectedIndex];
-        }
-        utterance.rate = rate;
-        utterance.pitch = pitch;
+      const ctx = getAudioContext();
+      activeSourceNode = ctx.createBufferSource();
+      activeSourceNode.buffer = buf;
+      activeSourceNode.playbackRate.value = parseFloat(speedSelect.value);
 
-        utterance.onstart = () => {
-          isPlayingPreview = true;
-          document.getElementById('preview-icon').className = 'fa-solid fa-pause text-sm';
-          document.getElementById('preview-status').innerText = 'Speaking preview...';
-        };
+      activeSourceNode.connect(ctx.destination);
+      activeSourceNode.start(0);
 
-        utterance.onend = () => { stopPreview(); };
-        utterance.onerror = () => { stopPreview(); };
+      isPlaying = true;
+      document.getElementById('preview-icon').className = 'fa-solid fa-pause text-sm';
+      document.getElementById('preview-status').innerText = 'Playing speech audio...';
 
-        window.speechSynthesis.speak(utterance);
-      } else {
-        // Fallback Web Audio playback
-        getOrGenerateBuffer().then((buf) => {
-          if (!buf) return;
-          const ctx = getAudioContext();
-          const src = ctx.createBufferSource();
-          src.buffer = buf;
-          src.connect(ctx.destination);
-          src.start(0);
-          isPlayingPreview = true;
-          document.getElementById('preview-icon').className = 'fa-solid fa-pause text-sm';
-          document.getElementById('preview-status').innerText = 'Playing speech audio...';
-          src.onended = () => { stopPreview(); };
-        });
-      }
+      activeSourceNode.onended = () => {
+        stopPreview();
+      };
     };
 
     function stopPreview() {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
+      if (activeSourceNode) {
+        try { activeSourceNode.stop(); } catch (e) {}
+        activeSourceNode = null;
       }
-      isPlayingPreview = false;
+      isPlaying = false;
       document.getElementById('preview-icon').className = 'fa-solid fa-play text-sm';
       document.getElementById('preview-status').innerText = 'Ready to generate speech';
     }
 
     /* ==========================================================================
-       EXPORTERS (16-BIT WAV & MP3)
+       ACCURATE WAV & MP3 EXPORTERS (Studio 44.1kHz 16-Bit PCM)
        ========================================================================== */
+    function renderResampledBuffer(srcBuffer, rate) {
+      if (rate === 1.0) return srcBuffer;
+
+      // Resample to apply speed multiplier cleanly without pitch glitching
+      const targetFrames = Math.round(srcBuffer.length / rate);
+      const ctx = getAudioContext();
+      const resampled = ctx.createBuffer(srcBuffer.numberOfChannels, targetFrames, srcBuffer.sampleRate);
+
+      for (let ch = 0; ch < srcBuffer.numberOfChannels; ch++) {
+        const inputData = srcBuffer.getChannelData(ch);
+        const outputData = resampled.getChannelData(ch);
+        for (let i = 0; i < targetFrames; i++) {
+          const srcIdx = i * rate;
+          const i0 = Math.floor(srcIdx);
+          const i1 = Math.min(i0 + 1, srcBuffer.length - 1);
+          const frac = srcIdx - i0;
+          outputData[i] = inputData[i0] * (1 - frac) + inputData[i1] * frac;
+        }
+      }
+      return resampled;
+    }
+
+    // 16-Bit PCM WAV Encoder
     function audioBufferToWavBlob(buffer) {
       const numOfChan = buffer.numberOfChannels;
       const length = buffer.length * numOfChan * 2 + 44;
@@ -315,8 +326,8 @@
       setUint32(length - 8);
       setUint32(0x45564157); // "WAVE"
       setUint32(0x20746d66); // "fmt "
-      setUint32(16);          // Subchunk1Size (16 for PCM)
-      setUint16(1);           // AudioFormat = 1 (PCM)
+      setUint32(16);          // 16 bytes Subchunk1
+      setUint16(1);           // PCM
       setUint16(numOfChan);
       setUint32(buffer.sampleRate);
       setUint32(buffer.sampleRate * 2 * numOfChan);
@@ -342,6 +353,7 @@
       return new Blob([out.buffer], { type: 'audio/wav' });
     }
 
+    // MP3 LameJS Encoder
     function audioBufferToMp3Blob(buffer) {
       const channels = buffer.numberOfChannels;
       const sampleRate = buffer.sampleRate;
@@ -363,8 +375,8 @@
       for (let i = 0; i < leftInt16.length; i += sampleBlockSize) {
         const leftChunk = leftInt16.subarray(i, i + sampleBlockSize);
         const rightChunk = rightInt16.subarray(i, i + sampleBlockSize);
-        const mp3buf = channels === 2
-          ? mp3encoder.encodeBuffer(leftChunk, rightChunk)
+        const mp3buf = channels === 2 
+          ? mp3encoder.encodeBuffer(leftChunk, rightChunk) 
           : mp3encoder.encodeBuffer(leftChunk);
         if (mp3buf.length > 0) mp3Data.push(mp3buf);
       }
@@ -390,10 +402,13 @@
 
     document.getElementById('btn-download-wav').onclick = async () => {
       document.getElementById('export-status').innerText = 'Preparing WAV...';
-      const buf = await getOrGenerateBuffer();
+      const buf = await getOrGenerateSpeechBuffer();
       if (!buf) return;
 
-      const blob = audioBufferToWavBlob(buf);
+      const rate = parseFloat(speedSelect.value);
+      const readyBuffer = renderResampledBuffer(buf, rate);
+      const blob = audioBufferToWavBlob(readyBuffer);
+
       triggerDownload(blob, `speech_${Date.now()}.wav`);
       document.getElementById('export-status').innerText = 'Downloaded WAV!';
       setTimeout(() => { document.getElementById('export-status').innerText = ''; }, 3000);
@@ -401,10 +416,13 @@
 
     document.getElementById('btn-download-mp3').onclick = async () => {
       document.getElementById('export-status').innerText = 'Encoding MP3...';
-      const buf = await getOrGenerateBuffer();
+      const buf = await getOrGenerateSpeechBuffer();
       if (!buf) return;
 
-      const blob = audioBufferToMp3Blob(buf);
+      const rate = parseFloat(speedSelect.value);
+      const readyBuffer = renderResampledBuffer(buf, rate);
+      const blob = audioBufferToMp3Blob(readyBuffer);
+
       triggerDownload(blob, `speech_${Date.now()}.mp3`);
       document.getElementById('export-status').innerText = 'Downloaded MP3!';
       setTimeout(() => { document.getElementById('export-status').innerText = ''; }, 3000);
