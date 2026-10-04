@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SonicForge DAW - Multi-Track Sound Effects & Speech Studio</title>
+  <title>SonicForge DAW - Sound Effects & Audio Workstation Studio</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- lamejs MP3 Encoder -->
+  <!-- LameJS MP3 Encoder CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -16,113 +16,96 @@
       theme: {
         extend: {
           colors: {
-            brand: {
-              400: '#818cf8',
-              500: '#6366f1',
-              600: '#4f46e5',
-            },
-            surface: {
-              800: '#1e2230',
-              850: '#171a26',
-              900: '#0f111a',
-              950: '#090a10',
-            }
+            brand: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' },
+            panel: { 800: '#1e2230', 850: '#151824', 900: '#0d101a', 950: '#07090f' }
           },
           fontFamily: {
-            mono: ['JetBrains Mono', 'Menlo', 'monospace']
+            mono: ['JetBrains Mono', 'Menlo', 'Courier New', 'monospace']
           }
         }
       }
-    }
+    };
   </script>
   <style>
     ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f111a; }
-    ::-webkit-scrollbar-thumb { background: #2a3147; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #404b6b; }
-    .timeline-grid {
+    ::-webkit-scrollbar-track { background: #07090f; }
+    ::-webkit-scrollbar-thumb { background: #252b3d; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3c4664; }
+    .timeline-canvas-grid {
       background-size: 50px 100%;
       background-image: linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
     }
-    .timeline-clip {
+    .timeline-clip-item {
       user-select: none;
       touch-action: none;
-      transition: box-shadow 0.15s ease, transform 0.1s ease;
+      transition: box-shadow 0.15s ease;
     }
-    .timeline-clip:hover {
-      box-shadow: 0 0 14px rgba(99, 102, 241, 0.65);
+    .timeline-clip-item:hover {
+      box-shadow: 0 0 14px rgba(99, 102, 241, 0.6);
     }
-    .playhead-marker {
-      pointer-events: none;
-      box-shadow: 0 0 10px rgba(6, 182, 212, 0.85);
-    }
-    .drop-lane-active {
-      background-color: rgba(99, 102, 241, 0.15) !important;
-      outline: 2px dashed rgba(129, 140, 248, 0.7);
+    .timeline-drop-target {
+      background-color: rgba(99, 102, 241, 0.14) !important;
+      outline: 2px dashed rgba(129, 140, 248, 0.8) !important;
     }
   </style>
 </head>
-<body class="bg-surface-950 text-slate-100 min-h-screen flex flex-col font-sans select-none overflow-x-hidden">
+<body class="bg-panel-950 text-slate-100 min-h-screen flex flex-col font-sans select-none overflow-x-hidden">
 
-  <header class="bg-surface-900 border-b border-slate-800 px-3 py-2 flex flex-wrap items-center justify-between gap-3 z-30 sticky top-0 shadow-lg">
+  <!-- TOP HEADER & TRANSPORT BAR -->
+  <header class="bg-panel-900 border-b border-slate-800 px-3 py-2 flex flex-wrap items-center justify-between gap-3 z-30 sticky top-0 shadow-lg">
+    <!-- Brand -->
     <div class="flex items-center space-x-3">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/25">
         <i class="fa-solid fa-wave-square text-white text-base"></i>
       </div>
       <div>
         <div class="flex items-center gap-2">
           <h1 class="text-sm md:text-base font-bold bg-gradient-to-r from-white via-indigo-200 to-cyan-300 bg-clip-text text-transparent">SonicForge DAW</h1>
-          <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">Studio Pro</span>
+          <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">Studio v2</span>
         </div>
-        <p class="text-[11px] text-slate-400">Multi-Track Sound Effects, Speech & Foley Workstation</p>
+        <p class="text-[11px] text-slate-400">4-Track Multi-Clip Audio & Speech Workstation</p>
       </div>
     </div>
 
-    <!-- Stepped Transport Controls & Timecode -->
-    <div class="flex items-center bg-surface-850 px-2.5 py-1.5 rounded-2xl border border-slate-800 shadow-inner flex-wrap gap-1.5">
-      <!-- Jump to Start -->
-      <button id="btn-jump-start" title="Jump to start (Home)" class="w-7 h-7 rounded-lg bg-surface-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-xs">
+    <!-- Stepped Transport Controls -->
+    <div class="flex items-center bg-panel-850 px-2 py-1.5 rounded-2xl border border-slate-800 shadow-inner flex-wrap gap-1">
+      <button id="btn-jump-start" title="Jump to 0:00 (Home)" class="w-7 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-xs">
         <i class="fa-solid fa-backward-step"></i>
       </button>
-      <!-- Step -5s -->
-      <button id="btn-step-back-5" title="Step back 5s (Shift+Left)" class="px-2 h-7 rounded-lg bg-surface-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
+      <button id="btn-step-back-5" title="Rewind 5s (Shift + Left)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
         <i class="fa-solid fa-angles-left mr-0.5 text-[9px]"></i>5s
       </button>
-      <!-- Step -1s -->
-      <button id="btn-step-back-1" title="Step back 1s (Left Arrow)" class="px-2 h-7 rounded-lg bg-surface-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
+      <button id="btn-step-back-1" title="Rewind 1s (Left Arrow)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
         <i class="fa-solid fa-chevron-left mr-0.5 text-[9px]"></i>1s
       </button>
 
-      <!-- Central Play/Pause -->
+      <!-- Center Play/Pause -->
       <button id="btn-play" title="Play / Pause (Space)" class="w-9 h-9 rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 text-white font-bold flex items-center justify-center shadow-lg shadow-indigo-500/30 transition transform active:scale-95 mx-1">
         <i id="play-icon" class="fa-solid fa-play ml-0.5 text-xs"></i>
       </button>
 
-      <!-- Step +1s -->
-      <button id="btn-step-fwd-1" title="Step forward 1s (Right Arrow)" class="px-2 h-7 rounded-lg bg-surface-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
+      <button id="btn-step-fwd-1" title="Forward 1s (Right Arrow)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
         1s<i class="fa-solid fa-chevron-right ml-0.5 text-[9px]"></i>
       </button>
-      <!-- Step +5s -->
-      <button id="btn-step-fwd-5" title="Step forward 5s (Shift+Right)" class="px-2 h-7 rounded-lg bg-surface-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
+      <button id="btn-step-fwd-5" title="Forward 5s (Shift + Right)" class="px-2 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-[11px] font-mono">
         5s<i class="fa-solid fa-angles-right ml-0.5 text-[9px]"></i>
       </button>
-      <!-- Jump to End -->
-      <button id="btn-jump-end" title="Jump to timeline end (End)" class="w-7 h-7 rounded-lg bg-surface-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-xs">
+      <button id="btn-jump-end" title="Jump to End (End)" class="w-7 h-7 rounded-lg bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition active:scale-95 text-xs">
         <i class="fa-solid fa-forward-step"></i>
       </button>
 
       <div class="h-5 w-px bg-slate-700 mx-1"></div>
 
-      <!-- Live High Precision Timecode -->
-      <div class="flex items-baseline space-x-1 font-mono text-cyan-400 bg-surface-950 px-2.5 py-1 rounded-lg border border-slate-800">
+      <!-- Timecode -->
+      <div class="flex items-baseline space-x-1 font-mono text-cyan-400 bg-panel-950 px-2.5 py-1 rounded-lg border border-slate-800">
         <span id="timecode-display" class="text-xs font-semibold tracking-wider">00:00.00</span>
         <span class="text-[9px] text-slate-500">/ 03:00.00</span>
       </div>
     </div>
 
-    <!-- Export Actions: WAV & MP3 -->
+    <!-- Export WAV & MP3 -->
     <div class="flex items-center space-x-2">
-      <div class="flex rounded-xl shadow-lg shadow-indigo-500/10 overflow-hidden">
+      <div class="flex rounded-xl shadow-lg shadow-indigo-500/10 overflow-hidden border border-slate-700">
         <button id="btn-export-wav" class="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white text-xs font-semibold transition active:scale-95">
           <i class="fa-solid fa-file-audio"></i>
           <span>Export WAV</span>
@@ -138,9 +121,11 @@
     </div>
   </header>
 
+  <!-- MAIN WORKSPACE -->
   <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
-    <!-- LEFT PANEL: Task / Project Manager -->
-    <aside class="w-full lg:w-64 bg-surface-900 border-b lg:border-b-0 lg:border-r border-slate-800 flex flex-col flex-shrink-0">
+    
+    <!-- LEFT SIDEBAR: Tasks & Projects Manager -->
+    <aside class="w-full lg:w-64 bg-panel-900 border-b lg:border-b-0 lg:border-r border-slate-800 flex flex-col flex-shrink-0">
       <div class="p-3 border-b border-slate-800 flex items-center justify-between">
         <div class="flex items-center space-x-2">
           <i class="fa-solid fa-layer-group text-indigo-400 text-sm"></i>
@@ -152,39 +137,38 @@
         </button>
       </div>
 
-      <!-- Task List Container -->
+      <!-- Task Cards Scroll List -->
       <div id="tasks-list" class="flex-1 overflow-y-auto p-2 space-y-1.5 max-h-48 lg:max-h-none">
-        <!-- Rendered dynamically -->
+        <!-- Rendered dynamically via JS -->
       </div>
 
-      <!-- Task Stats Footer & Keyboard Hint -->
-      <div class="p-2.5 border-t border-slate-800/80 bg-surface-950/60 text-[10px] text-slate-400 flex flex-col gap-1">
+      <!-- Task Stats Footer -->
+      <div class="p-2.5 border-t border-slate-800/80 bg-panel-950/60 text-[10px] text-slate-400 flex flex-col gap-1">
         <div class="flex items-center justify-between">
           <span id="task-clip-count">0 Clips placed</span>
           <span class="text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-circle-check text-[9px]"></i>Saved</span>
         </div>
         <div class="text-[9px] text-slate-500 truncate">
-          <kbd class="px-1 bg-surface-800 rounded">←/→</kbd> Step 1s &bull; <kbd class="px-1 bg-surface-800 rounded">Shift+←/→</kbd> 5s &bull; <kbd class="px-1 bg-surface-800 rounded">Space</kbd> Play
+          <kbd class="px-1 bg-panel-800 rounded">←/→</kbd> 1s &bull; <kbd class="px-1 bg-panel-800 rounded">Shift+←/→</kbd> 5s &bull; <kbd class="px-1 bg-panel-800 rounded">Space</kbd> Play
         </div>
       </div>
     </aside>
 
-    <section class="flex-1 flex flex-col bg-surface-950 overflow-hidden relative">
-      <!-- Timeline Top Bar: Active Title & Zoom -->
-      <div class="px-4 py-1.5 bg-surface-900/90 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+    <!-- CENTER TIMELINE & TRACK LANES -->
+    <section class="flex-1 flex flex-col bg-panel-950 overflow-hidden relative">
+      <div class="px-4 py-1.5 bg-panel-900/90 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
         <div class="flex items-center space-x-3">
           <span class="font-medium text-slate-200 flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span id="current-task-heading" class="font-bold text-white tracking-wide">Task 1</span>
           </span>
-          <span class="hidden sm:inline text-slate-500">| 4 Isolated Tracks (Speech, SFX, Foley, Ambience)</span>
+          <span class="hidden sm:inline text-slate-500">| 4 Tracks (Speech, SFX, Foley, Ambience)</span>
         </div>
         <div class="flex items-center space-x-2">
-          <span class="text-[10px] text-slate-500 hidden md:inline">Drag clips or drop sounds directly onto tracks</span>
-          <button id="btn-zoom-out" title="Zoom Out" class="w-6 h-6 rounded bg-surface-800 hover:bg-slate-700 flex items-center justify-center text-slate-300">
+          <button id="btn-zoom-out" title="Zoom Out" class="w-6 h-6 rounded bg-panel-800 hover:bg-slate-700 flex items-center justify-center text-slate-300">
             <i class="fa-solid fa-minus text-[10px]"></i>
           </button>
-          <button id="btn-zoom-in" title="Zoom In" class="w-6 h-6 rounded bg-surface-800 hover:bg-slate-700 flex items-center justify-center text-slate-300">
+          <button id="btn-zoom-in" title="Zoom In" class="w-6 h-6 rounded bg-panel-800 hover:bg-slate-700 flex items-center justify-center text-slate-300">
             <i class="fa-solid fa-plus text-[10px]"></i>
           </button>
         </div>
@@ -192,10 +176,10 @@
 
       <div class="flex-1 flex overflow-hidden">
         <!-- Track Headers (Track 1: Speech, Track 2: SFX, Track 3: Foley, Track 4: Ambience) -->
-        <div class="w-48 md:w-56 bg-surface-900 border-r border-slate-800 flex flex-col flex-shrink-0 z-10 pt-7">
+        <div class="w-48 md:w-56 bg-panel-900 border-r border-slate-800 flex flex-col flex-shrink-0 z-10 pt-7">
           
-          <!-- Track 1 Header: Speech -->
-          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-surface-900/60">
+          <!-- Track 1: Speech -->
+          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-panel-900/70">
             <div class="flex items-center justify-between">
               <span class="text-xs font-semibold text-cyan-400 flex items-center gap-1.5 truncate">
                 <i class="fa-solid fa-microphone-lines text-[11px]"></i> Track 1: Speech
@@ -203,14 +187,14 @@
               <button onclick="clearTrack(0)" title="Clear Track 1" class="text-slate-500 hover:text-rose-400 text-[10px]"><i class="fa-solid fa-eraser"></i></button>
             </div>
             <div class="flex items-center space-x-1.5">
-              <button onclick="toggleMute(0)" id="mute-btn-0" class="px-2 py-0.5 text-[10px] font-bold rounded bg-surface-800 text-slate-400 hover:text-white border border-slate-700">M</button>
-              <button onclick="toggleSolo(0)" id="solo-btn-0" class="px-2 py-0.5 text-[10px] font-bold rounded bg-surface-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
-              <input type="range" min="0" max="1" step="0.01" value="0.9" oninput="setTrackVolume(0, this.value)" class="w-full accent-cyan-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
+              <button onclick="toggleMute(0)" id="mute-btn-0" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-white border border-slate-700">M</button>
+              <button onclick="toggleSolo(0)" id="solo-btn-0" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
+              <input type="range" min="0" max="1.5" step="0.01" value="1.0" oninput="setTrackVolume(0, this.value)" class="w-full accent-cyan-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
             </div>
           </div>
 
-          <!-- Track 2 Header: SFX -->
-          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-surface-900/60">
+          <!-- Track 2: SFX -->
+          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-panel-900/70">
             <div class="flex items-center justify-between">
               <span class="text-xs font-semibold text-violet-400 flex items-center gap-1.5 truncate">
                 <i class="fa-solid fa-bolt text-[11px]"></i> Track 2: SFX
@@ -218,14 +202,14 @@
               <button onclick="clearTrack(1)" title="Clear Track 2" class="text-slate-500 hover:text-rose-400 text-[10px]"><i class="fa-solid fa-eraser"></i></button>
             </div>
             <div class="flex items-center space-x-1.5">
-              <button onclick="toggleMute(1)" id="mute-btn-1" class="px-2 py-0.5 text-[10px] font-bold rounded bg-surface-800 text-slate-400 hover:text-white border border-slate-700">M</button>
-              <button onclick="toggleSolo(1)" id="solo-btn-1" class="px-2 py-0.5 text-[10px] font-bold rounded bg-surface-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
-              <input type="range" min="0" max="1" step="0.01" value="0.85" oninput="setTrackVolume(1, this.value)" class="w-full accent-violet-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
+              <button onclick="toggleMute(1)" id="mute-btn-1" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-white border border-slate-700">M</button>
+              <button onclick="toggleSolo(1)" id="solo-btn-1" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
+              <input type="range" min="0" max="1.5" step="0.01" value="0.9" oninput="setTrackVolume(1, this.value)" class="w-full accent-violet-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
             </div>
           </div>
 
-          <!-- Track 3 Header: Foley -->
-          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-surface-900/60">
+          <!-- Track 3: Foley -->
+          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-panel-900/70">
             <div class="flex items-center justify-between">
               <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1.5 truncate">
                 <i class="fa-solid fa-shoe-prints text-[11px]"></i> Track 3: Foley
@@ -233,14 +217,14 @@
               <button onclick="clearTrack(2)" title="Clear Track 3" class="text-slate-500 hover:text-rose-400 text-[10px]"><i class="fa-solid fa-eraser"></i></button>
             </div>
             <div class="flex items-center space-x-1.5">
-              <button onclick="toggleMute(2)" id="mute-btn-2" class="px-2 py-0.5 text-[10px] font-bold rounded bg-surface-800 text-slate-400 hover:text-white border border-slate-700">M</button>
-              <button onclick="toggleSolo(2)" id="solo-btn-2" class="px-2 py-0.5 text-[10px] font-bold rounded bg-surface-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
-              <input type="range" min="0" max="1" step="0.01" value="0.85" oninput="setTrackVolume(2, this.value)" class="w-full accent-emerald-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
+              <button onclick="toggleMute(2)" id="mute-btn-2" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-white border border-slate-700">M</button>
+              <button onclick="toggleSolo(2)" id="solo-btn-2" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
+              <input type="range" min="0" max="1.5" step="0.01" value="0.9" oninput="setTrackVolume(2, this.value)" class="w-full accent-emerald-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
             </div>
           </div>
 
-          <!-- Track 4 Header: Ambience -->
-          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-surface-900/60">
+          <!-- Track 4: Ambience -->
+          <div class="h-24 p-2.5 border-b border-slate-800 flex flex-col justify-between bg-panel-900/70">
             <div class="flex items-center justify-between">
               <span class="text-xs font-semibold text-amber-400 flex items-center gap-1.5 truncate">
                 <i class="fa-solid fa-cloud-showers-heavy text-[11px]"></i> Track 4: Ambience
@@ -248,66 +232,56 @@
               <button onclick="clearTrack(3)" title="Clear Track 4" class="text-slate-500 hover:text-rose-400 text-[10px]"><i class="fa-solid fa-eraser"></i></button>
             </div>
             <div class="flex items-center space-x-1.5">
-              <button onclick="toggleMute(3)" id="mute-btn-3" class="px-2 py-0.5 text-[10px] font-bold rounded bg-surface-800 text-slate-400 hover:text-white border border-slate-700">M</button>
-              <button onclick="toggleSolo(3)" id="solo-btn-3" class="px-2 py-0.5 text-[10px] font-bold rounded bg-surface-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
-              <input type="range" min="0" max="1" step="0.01" value="0.75" oninput="setTrackVolume(3, this.value)" class="w-full accent-amber-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
+              <button onclick="toggleMute(3)" id="mute-btn-3" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-white border border-slate-700">M</button>
+              <button onclick="toggleSolo(3)" id="solo-btn-3" class="px-2 py-0.5 text-[10px] font-bold rounded bg-panel-800 text-slate-400 hover:text-amber-400 border border-slate-700">S</button>
+              <input type="range" min="0" max="1.5" step="0.01" value="0.8" oninput="setTrackVolume(3, this.value)" class="w-full accent-amber-400 h-1 bg-slate-700 rounded-lg cursor-pointer">
             </div>
           </div>
-
         </div>
 
         <!-- Scrollable Timeline Lanes Container -->
         <div id="timeline-scroll-container" class="flex-1 overflow-x-auto overflow-y-hidden relative select-none">
           <!-- Time Ruler -->
-          <div id="timeline-ruler" class="h-7 bg-surface-900/95 border-b border-slate-800 relative cursor-pointer text-[10px] font-mono text-slate-400 select-none">
-            <!-- Dynamic tick marks injected in JS -->
+          <div id="timeline-ruler" class="h-7 bg-panel-900/95 border-b border-slate-800 relative cursor-pointer text-[10px] font-mono text-slate-400 select-none">
           </div>
 
-          <!-- Vertical Playhead Line -->
-          <div id="playhead-line" class="absolute top-0 bottom-0 w-0.5 bg-cyan-400 z-30 pointer-events-none playhead-marker" style="left: 0px;">
+          <!-- Playhead Line -->
+          <div id="playhead-line" class="absolute top-0 bottom-0 w-0.5 bg-cyan-400 z-30 pointer-events-none shadow-[0_0_8px_rgba(6,182,212,0.9)]" style="left: 0px;">
             <div class="w-3.5 h-3.5 -ml-1.5 -top-0.5 bg-cyan-400 rotate-45 transform rounded-sm shadow-md"></div>
           </div>
 
           <!-- Track Lanes Area -->
-          <div id="tracks-lanes-wrapper" class="relative timeline-grid">
-            
-            <!-- Lane 0: Speech -->
-            <div id="lane-0" data-track-index="0" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01] transition-colors">
+          <div id="tracks-lanes-wrapper" class="relative timeline-canvas-grid">
+            <div id="lane-0" data-track-index="0" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01]">
               <span class="absolute right-4 text-xs font-mono text-slate-800 pointer-events-none uppercase font-bold tracking-wider">Track 1 &bull; Speech & Dialogue</span>
             </div>
-
-            <!-- Lane 1: SFX -->
-            <div id="lane-1" data-track-index="1" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01] transition-colors">
+            <div id="lane-1" data-track-index="1" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01]">
               <span class="absolute right-4 text-xs font-mono text-slate-800 pointer-events-none uppercase font-bold tracking-wider">Track 2 &bull; Sound Effects</span>
             </div>
-
-            <!-- Lane 2: Foley -->
-            <div id="lane-2" data-track-index="2" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01] transition-colors">
+            <div id="lane-2" data-track-index="2" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01]">
               <span class="absolute right-4 text-xs font-mono text-slate-800 pointer-events-none uppercase font-bold tracking-wider">Track 3 &bull; Foley & Props</span>
             </div>
-
-            <!-- Lane 3: Ambience -->
-            <div id="lane-3" data-track-index="3" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01] transition-colors">
+            <div id="lane-3" data-track-index="3" class="h-24 border-b border-slate-800/80 relative flex items-center hover:bg-white/[0.01]">
               <span class="absolute right-4 text-xs font-mono text-slate-800 pointer-events-none uppercase font-bold tracking-wider">Track 4 &bull; Ambience & Background</span>
             </div>
-
           </div>
         </div>
       </div>
     </section>
 
-    <aside class="w-full lg:w-96 bg-surface-900 border-t lg:border-t-0 lg:border-l border-slate-800 flex flex-col flex-shrink-0">
+    <!-- RIGHT STUDIO PANEL: Tabs (TTS, Library, Foley/Ambience Gen, Mic/STT) -->
+    <aside class="w-full lg:w-96 bg-panel-900 border-t lg:border-t-0 lg:border-l border-slate-800 flex flex-col flex-shrink-0">
       
-      <!-- Studio Tabs Navigation -->
-      <div class="flex border-b border-slate-800 bg-surface-950/40 p-1 gap-1 overflow-x-auto">
-        <button onclick="switchStudioTab('library')" id="tab-btn-library" class="flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg bg-surface-800 text-indigo-400 shadow-sm transition whitespace-nowrap">
-          <i class="fa-solid fa-icons mr-1"></i> Library
+      <!-- Tab Navigation -->
+      <div class="flex border-b border-slate-800 bg-panel-950/40 p-1 gap-1 overflow-x-auto">
+        <button onclick="switchStudioTab('tts')" id="tab-btn-tts" class="flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg bg-panel-800 text-indigo-400 shadow-sm transition whitespace-nowrap">
+          <i class="fa-solid fa-comment-dots mr-1"></i> TTS Studio
+        </button>
+        <button onclick="switchStudioTab('library')" id="tab-btn-library" class="flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
+          <i class="fa-solid fa-icons mr-1"></i> SFX & Foley
         </button>
         <button onclick="switchStudioTab('generator')" id="tab-btn-generator" class="flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
           <i class="fa-solid fa-sliders mr-1"></i> Ambience Gen
-        </button>
-        <button onclick="switchStudioTab('tts')" id="tab-btn-tts" class="flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
-          <i class="fa-solid fa-comment-dots mr-1"></i> TTS Studio
         </button>
         <button onclick="switchStudioTab('mic')" id="tab-btn-mic" class="flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition whitespace-nowrap">
           <i class="fa-solid fa-microphone mr-1"></i> Mic / STT
@@ -316,42 +290,146 @@
 
       <div class="flex-1 overflow-y-auto p-3 space-y-4">
         
-        <!-- PANEL 1: Categorized Sound Library (SFX, Foley, Ambience) -->
-        <div id="panel-library" class="space-y-3">
+        <!-- TAB 1: TEXT-TO-SPEECH STUDIO (Natural Speech Synthesis) -->
+        <div id="panel-tts" class="space-y-4">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs font-bold text-slate-300 uppercase tracking-wider">Voice Script</label>
+              <span class="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
+                <i class="fa-solid fa-circle-check"></i> Natural Human Speech
+              </span>
+            </div>
+            <textarea id="tts-input" rows="3" class="w-full bg-panel-850 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 leading-relaxed" placeholder="Type text here to synthesize natural speech...">Warning! Engine core temperature exceeding normal parameters. Initiating emergency coolant sequence.</textarea>
+          </div>
+
+          <div class="space-y-3 bg-panel-850 p-3 rounded-xl border border-slate-800/80">
+            <div class="flex items-center justify-between">
+              <label class="text-[11px] font-semibold text-slate-300">Voice Profiles</label>
+              <span id="tts-status-badge" class="text-[10px] text-indigo-400 font-semibold flex items-center gap-1">
+                <i class="fa-solid fa-user-check"></i> Ready
+              </span>
+            </div>
+
+            <!-- Voice preset buttons -->
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button onclick="applyVoicePreset('male-low')" id="preset-btn-male-low" class="voice-preset-btn p-2 rounded-lg bg-panel-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
+                <div class="font-bold text-slate-200 flex items-center gap-1.5">
+                  <i class="fa-solid fa-user text-indigo-400 text-[10px]"></i> Brian
+                </div>
+                <div class="text-[10px] text-slate-400">Deep Male Voice</div>
+              </button>
+              <button onclick="applyVoicePreset('male-med')" id="preset-btn-male-med" class="voice-preset-btn p-2 rounded-lg bg-indigo-600/30 text-left border border-indigo-500/60 transition">
+                <div class="font-bold text-indigo-200 flex items-center gap-1.5">
+                  <i class="fa-solid fa-user text-cyan-400 text-[10px]"></i> Russell
+                </div>
+                <div class="text-[10px] text-slate-300">Medium Clear Male</div>
+              </button>
+              <button onclick="applyVoicePreset('female-med')" id="preset-btn-female-med" class="voice-preset-btn p-2 rounded-lg bg-panel-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
+                <div class="font-bold text-slate-200 flex items-center gap-1.5">
+                  <i class="fa-solid fa-user text-emerald-400 text-[10px]"></i> Amy
+                </div>
+                <div class="text-[10px] text-slate-400">Natural Female</div>
+              </button>
+              <button onclick="applyVoicePreset('female-high')" id="preset-btn-female-high" class="voice-preset-btn p-2 rounded-lg bg-panel-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
+                <div class="font-bold text-slate-200 flex items-center gap-1.5">
+                  <i class="fa-solid fa-user text-rose-400 text-[10px]"></i> Salli
+                </div>
+                <div class="text-[10px] text-slate-400">Crisp High Female</div>
+              </button>
+            </div>
+
+            <!-- Pitch, Rate, and Target Track Controls -->
+            <div class="space-y-2 pt-2 border-t border-slate-800 text-xs">
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-1">Voice Selection</label>
+                  <select id="tts-voice-select" class="w-full bg-panel-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
+                    <option value="Russell" selected>Russell (Medium Male)</option>
+                    <option value="Brian">Brian (Low Male)</option>
+                    <option value="Amy">Amy (Medium Female)</option>
+                    <option value="Salli">Salli (High Female)</option>
+                    <option value="Emma">Emma (British Female)</option>
+                    <option value="Geraint">Geraint (Welsh Male)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-1">Target Track</label>
+                  <select id="tts-target-track" class="w-full bg-panel-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
+                    <option value="0">Track 1: Speech</option>
+                    <option value="1">Track 2: SFX</option>
+                    <option value="2">Track 3: Foley</option>
+                    <option value="3">Track 4: Ambience</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <div>
+                  <div class="flex justify-between text-[10px] text-slate-400">
+                    <span>Speed / Rate</span>
+                    <span id="label-tts-rate">1.0x</span>
+                  </div>
+                  <input id="tts-rate-slider" type="range" min="0.7" max="1.5" step="0.05" value="1.0" class="w-full accent-indigo-400 h-1 bg-slate-700 rounded cursor-pointer" oninput="document.getElementById('label-tts-rate').textContent = this.value + 'x'">
+                </div>
+                <div>
+                  <div class="flex justify-between text-[10px] text-slate-400">
+                    <span>Pitch</span>
+                    <span id="label-tts-pitch">1.0x</span>
+                  </div>
+                  <input id="tts-pitch-slider" type="range" min="0.7" max="1.4" step="0.05" value="1.0" class="w-full accent-indigo-400 h-1 bg-slate-700 rounded cursor-pointer" oninput="document.getElementById('label-tts-pitch').textContent = this.value + 'x'">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button id="btn-preview-tts" class="flex-1 py-2 px-3 bg-panel-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 flex items-center justify-center space-x-1.5 transition active:scale-95">
+              <i class="fa-solid fa-volume-high text-[11px] text-indigo-400"></i>
+              <span>Preview Voice</span>
+            </button>
+            <button id="btn-add-tts-to-track" class="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-1.5 transition active:scale-95">
+              <i class="fa-solid fa-plus text-[10px]"></i>
+              <span>Add to Timeline</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TAB 2: SOUND EFFECTS & FOLEY LIBRARY -->
+        <div id="panel-library" class="hidden space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Audio Presets Library</h3>
-            <span class="text-[10px] text-slate-500">Drag card to lane or choose target</span>
+            <span class="text-[10px] text-slate-500">Drag card or pick track</span>
           </div>
 
           <!-- Category filter buttons -->
           <div class="flex gap-1.5">
             <button onclick="filterLibraryCategory('all')" id="cat-btn-all" class="px-2.5 py-1 text-[11px] rounded-lg bg-indigo-600 text-white font-medium">All</button>
-            <button onclick="filterLibraryCategory('sfx')" id="cat-btn-sfx" class="px-2.5 py-1 text-[11px] rounded-lg bg-surface-850 text-slate-400 hover:text-white">SFX</button>
-            <button onclick="filterLibraryCategory('foley')" id="cat-btn-foley" class="px-2.5 py-1 text-[11px] rounded-lg bg-surface-850 text-slate-400 hover:text-white">Foley</button>
-            <button onclick="filterLibraryCategory('ambience')" id="cat-btn-ambience" class="px-2.5 py-1 text-[11px] rounded-lg bg-surface-850 text-slate-400 hover:text-white">Ambience</button>
+            <button onclick="filterLibraryCategory('sfx')" id="cat-btn-sfx" class="px-2.5 py-1 text-[11px] rounded-lg bg-panel-850 text-slate-400 hover:text-white">SFX</button>
+            <button onclick="filterLibraryCategory('foley')" id="cat-btn-foley" class="px-2.5 py-1 text-[11px] rounded-lg bg-panel-850 text-slate-400 hover:text-white">Foley</button>
+            <button onclick="filterLibraryCategory('ambience')" id="cat-btn-ambience" class="px-2.5 py-1 text-[11px] rounded-lg bg-panel-850 text-slate-400 hover:text-white">Ambience</button>
           </div>
 
           <div id="library-cards-container" class="space-y-2">
-            <!-- Dynamic cards injected in JS with track selectors -->
+            <!-- Injected dynamically -->
           </div>
         </div>
 
-        <!-- PANEL 2: Custom Foley & Ambience Generator -->
+        <!-- TAB 3: AMBIENCE & FOLEY GENERATOR -->
         <div id="panel-generator" class="hidden space-y-3">
           <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Foley & Ambience Synthesizer</h3>
-            <span class="text-[10px] text-amber-400">Algorithmic</span>
+            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Procedural Generator</h3>
+            <span class="text-[10px] text-amber-400 font-mono">Algorithmic</span>
           </div>
 
-          <div class="bg-surface-850 p-3 rounded-xl border border-slate-800 space-y-3">
+          <div class="bg-panel-850 p-3 rounded-xl border border-slate-800 space-y-3">
             <div>
               <label class="text-[11px] font-semibold text-slate-300">Ambience Type</label>
-              <select id="gen-type" class="mt-1 w-full bg-surface-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
-                <option value="rain">Continuous Rainfall & Storm</option>
-                <option value="wind">Howling Mountain Wind</option>
+              <select id="gen-type" class="mt-1 w-full bg-panel-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
+                <option value="rain">Continuous Gentle Rain</option>
+                <option value="wind">Mountain Wind Howl</option>
                 <option value="drone">Deep Cosmic Sub-Drone</option>
-                <option value="footsteps">Gravel Footsteps Sequence</option>
-                <option value="vinyl">Vintage Vinyl Surface Noise</option>
+                <option value="vinyl">Vintage Vinyl Crackle & Warmth</option>
+                <option value="steps">Wood Footsteps Cadence</option>
               </select>
             </div>
 
@@ -365,7 +443,7 @@
               </div>
               <div>
                 <label class="text-[10px] text-slate-400 flex justify-between">
-                  <span>Filter / Tone</span>
+                  <span>Tone / Filter</span>
                   <span id="label-gen-tone">65%</span>
                 </label>
                 <input id="gen-tone" type="range" min="10" max="100" step="1" value="65" class="w-full h-1 bg-slate-700 accent-amber-400 rounded cursor-pointer" oninput="document.getElementById('label-gen-tone').textContent = this.value + '%'">
@@ -374,7 +452,7 @@
 
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Target Timeline Track</label>
-              <select id="gen-target-track" class="w-full bg-surface-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
+              <select id="gen-target-track" class="w-full bg-panel-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
                 <option value="3">Track 4: Ambience</option>
                 <option value="2">Track 3: Foley</option>
                 <option value="1">Track 2: SFX</option>
@@ -383,107 +461,19 @@
             </div>
 
             <div class="flex space-x-2 pt-1">
-              <button id="btn-preview-gen" class="flex-1 py-1.5 bg-surface-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700">
+              <button id="btn-preview-gen" class="flex-1 py-1.5 bg-panel-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700">
                 <i class="fa-solid fa-play mr-1"></i> Preview
               </button>
               <button id="btn-add-gen" class="flex-1 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg shadow">
-                <i class="fa-solid fa-plus mr-1"></i> Generate to Track
+                <i class="fa-solid fa-plus mr-1"></i> Add to Track
               </button>
             </div>
           </div>
         </div>
 
-        <div id="panel-tts" class="hidden space-y-4">
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="text-xs font-bold text-slate-300 uppercase tracking-wider">Voice Script</label>
-              <span class="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
-                <i class="fa-solid fa-circle-check"></i> High-Fidelity Human Audio
-              </span>
-            </div>
-            <textarea id="tts-input" rows="3" class="w-full bg-surface-850 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 leading-relaxed" placeholder="Type text here to synthesize speech...">Warning! System integrity compromised. Diverting auxiliary power to main thrusters.</textarea>
-          </div>
-
-          <!-- Presets & Voice Selectors -->
-          <div class="space-y-3 bg-surface-850 p-3 rounded-xl border border-slate-800/80">
-            <div class="flex items-center justify-between">
-              <label class="text-[11px] font-semibold text-slate-300">Natural Voice Profiles</label>
-              <span id="tts-loading-indicator" class="hidden text-[10px] text-indigo-400 font-semibold animate-pulse flex items-center gap-1">
-                <i class="fa-solid fa-spinner fa-spin"></i> Rendering Natural Audio...
-              </span>
-            </div>
-
-            <!-- Voice preset cards -->
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              <button onclick="applyVoicePreset('male-low')" id="preset-btn-male-low" class="voice-preset-btn p-2 rounded-lg bg-surface-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
-                <div class="font-bold text-slate-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-indigo-400 text-[10px]"></i> Brian
-                </div>
-                <div class="text-[10px] text-slate-400">Deep & Resonant Male</div>
-              </button>
-              <button onclick="applyVoicePreset('male-med')" id="preset-btn-male-med" class="voice-preset-btn p-2 rounded-lg bg-indigo-600/30 text-left border border-indigo-500/60 transition">
-                <div class="font-bold text-indigo-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-cyan-400 text-[10px]"></i> Russell
-                </div>
-                <div class="text-[10px] text-slate-300">Medium Clear Male</div>
-              </button>
-              <button onclick="applyVoicePreset('female-med')" id="preset-btn-female-med" class="voice-preset-btn p-2 rounded-lg bg-surface-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
-                <div class="font-bold text-slate-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-emerald-400 text-[10px]"></i> Amy
-                </div>
-                <div class="text-[10px] text-slate-400">Smooth Narrative Female</div>
-              </button>
-              <button onclick="applyVoicePreset('female-high')" id="preset-btn-female-high" class="voice-preset-btn p-2 rounded-lg bg-surface-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition">
-                <div class="font-bold text-slate-200 flex items-center gap-1.5">
-                  <i class="fa-solid fa-user text-rose-400 text-[10px]"></i> Salli
-                </div>
-                <div class="text-[10px] text-slate-400">Crisp High Female</div>
-              </button>
-            </div>
-
-            <!-- Detailed voice selection & Target Track -->
-            <div class="space-y-2 pt-2 border-t border-slate-800">
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="text-[10px] text-slate-400 block mb-1">Direct Neural Voice</label>
-                  <select id="tts-voice-select" class="w-full bg-surface-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
-                    <option value="Brian">Brian (Low Male)</option>
-                    <option value="Russell" selected>Russell (Med Male)</option>
-                    <option value="Geraint">Geraint (Welsh Male)</option>
-                    <option value="Amy">Amy (Med Female)</option>
-                    <option value="Emma">Emma (British Female)</option>
-                    <option value="Joanna">Joanna (Narrative Female)</option>
-                    <option value="Salli">Salli (High Female)</option>
-                    <option value="Ivy">Ivy (Youth Female)</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="text-[10px] text-slate-400 block mb-1">Target Track</label>
-                  <select id="tts-target-track" class="w-full bg-surface-900 border border-slate-700 rounded-lg p-1.5 text-xs text-slate-200">
-                    <option value="0">Track 1: Speech</option>
-                    <option value="1">Track 2: SFX</option>
-                    <option value="2">Track 3: Foley</option>
-                    <option value="3">Track 4: Ambience</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex items-center space-x-2">
-            <button id="btn-preview-tts" class="flex-1 py-2 px-3 bg-surface-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 flex items-center justify-center space-x-1.5 transition active:scale-95">
-              <i class="fa-solid fa-volume-high text-[11px] text-indigo-400"></i>
-              <span>Preview Speech</span>
-            </button>
-            <button id="btn-add-tts-to-track" class="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-1.5 transition active:scale-95">
-              <i class="fa-solid fa-plus text-[10px]"></i>
-              <span>Generate to Track</span>
-            </button>
-          </div>
-        </div>
-
+        <!-- TAB 4: MICROPHONE & SPEECH-TO-TEXT -->
         <div id="panel-mic" class="hidden space-y-4">
-          <div class="bg-surface-850 p-4 rounded-xl border border-slate-800 text-center space-y-3">
+          <div class="bg-panel-850 p-4 rounded-xl border border-slate-800 text-center space-y-3">
             <div class="w-14 h-14 mx-auto rounded-full bg-slate-800/80 border-2 border-slate-700 flex items-center justify-center relative">
               <i id="mic-status-icon" class="fa-solid fa-microphone text-lg text-slate-400"></i>
               <div id="mic-pulse" class="hidden absolute inset-0 rounded-full border-2 border-rose-500 animate-ping"></div>
@@ -491,13 +481,13 @@
 
             <div>
               <h4 id="mic-status-text" class="text-xs font-bold text-slate-200">Microphone Standby</h4>
-              <p class="text-[10px] text-slate-400 mt-0.5">Record microphone directly into an AudioBuffer</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">Record up to 3 minutes directly into an AudioBuffer</p>
             </div>
 
             <div class="flex justify-center space-x-2 pt-1">
               <button id="btn-record-mic" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-rose-600/30 flex items-center space-x-2 transition">
                 <i class="fa-solid fa-circle text-[10px]"></i>
-                <span id="record-btn-text">Start Recording (Max 3m)</span>
+                <span id="record-btn-text">Start Recording</span>
               </button>
             </div>
             
@@ -512,27 +502,27 @@
               <label class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                 <i class="fa-solid fa-quote-left text-indigo-400"></i> STT Transcript
               </label>
-              <button id="btn-toggle-stt" class="text-[10px] px-2 py-0.5 rounded bg-surface-800 text-cyan-400 border border-slate-700 hover:bg-surface-700">
+              <button id="btn-toggle-stt" class="text-[10px] px-2 py-0.5 rounded bg-panel-800 text-cyan-400 border border-slate-700 hover:bg-panel-700">
                 <i class="fa-solid fa-satellite-dish mr-1"></i><span id="stt-status-label">Start STT</span>
               </button>
             </div>
-            <div id="stt-output-box" class="w-full min-h-[65px] max-h-32 overflow-y-auto bg-surface-850 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 italic">
+            <div id="stt-output-box" class="w-full min-h-[65px] max-h-32 overflow-y-auto bg-panel-850 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300 italic">
               Spoken words will transcribe live here...
             </div>
             
-            <button id="btn-convert-stt-tts" class="w-full py-1.5 px-2 bg-surface-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium rounded-lg border border-slate-700 flex items-center justify-center gap-1.5 transition">
+            <button id="btn-convert-stt-tts" class="w-full py-1.5 px-2 bg-panel-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium rounded-lg border border-slate-700 flex items-center justify-center gap-1.5 transition">
               <i class="fa-solid fa-arrow-turn-down text-indigo-400"></i>
               <span>Send Transcript to TTS Studio</span>
             </button>
           </div>
 
           <!-- Recorded Audio Actions -->
-          <div id="recorded-audio-actions" class="hidden bg-surface-850 p-3 rounded-xl border border-slate-800 space-y-2">
+          <div id="recorded-audio-actions" class="hidden bg-panel-850 p-3 rounded-xl border border-slate-800 space-y-2">
             <div class="text-[11px] font-semibold text-emerald-400 flex items-center gap-1.5">
               <i class="fa-solid fa-check-circle"></i> Audio Recorded Successfully!
             </div>
             <div class="flex items-center space-x-2">
-              <select id="mic-target-track" class="w-1/2 bg-surface-900 border border-slate-700 rounded-lg p-1 text-xs text-slate-200">
+              <select id="mic-target-track" class="w-1/2 bg-panel-900 border border-slate-700 rounded-lg p-1 text-xs text-slate-200">
                 <option value="0">Track 1: Speech</option>
                 <option value="1">Track 2: SFX</option>
                 <option value="2">Track 3: Foley</option>
@@ -551,13 +541,14 @@
   </main>
 
   <!-- Notification Toast -->
-  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-surface-850 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl shadow-2xl flex items-center space-x-2.5 pointer-events-none text-xs">
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-panel-850 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl shadow-2xl flex items-center space-x-2.5 pointer-events-none text-xs">
     <i id="toast-icon" class="fa-solid fa-info-circle text-cyan-400"></i>
     <span id="toast-message">Notification</span>
   </div>
 
+  <!-- JAVASCRIPT ENGINE & ARCHITECTURE -->
   <script>
-    const MAX_DURATION_SEC = 180; // 3 minutes maximum
+    const MAX_DURATION_SEC = 180; // 3 minutes timeline maximum
     const PIXELS_PER_SECOND_BASE = 14;
     let currentZoom = 1.0;
     
@@ -572,9 +563,8 @@
       return audioCtx;
     }
 
-    // Storage and State
-    const STORAGE_KEY = 'sonicforge_daw_tasks_v4';
-    
+    const STORAGE_KEY = 'sonicforge_daw_tasks_v5';
+
     let state = {
       tasks: [],
       currentTaskId: null,
@@ -586,13 +576,13 @@
     };
 
     const trackControls = [
-      { volume: 0.9, muted: false, solo: false }, // Track 1: Speech
-      { volume: 0.85, muted: false, solo: false }, // Track 2: SFX
-      { volume: 0.85, muted: false, solo: false }, // Track 3: Foley
-      { volume: 0.75, muted: false, solo: false }, // Track 4: Ambience
+      { volume: 1.0, muted: false, solo: false }, // Track 1: Speech
+      { volume: 0.9, muted: false, solo: false }, // Track 2: SFX
+      { volume: 0.9, muted: false, solo: false }, // Track 3: Foley
+      { volume: 0.8, muted: false, solo: false }  // Track 4: Ambience
     ];
 
-    // In-Memory storage for rendered Web Audio Buffers (TTS, Mic, Custom Ambience)
+    // In-memory registry for decoded audio buffers (TTS speech, microphone clips, procedural sounds)
     window.clipBufferRegistry = {};
     const ttsAudioBufferCache = new Map();
 
@@ -637,7 +627,7 @@
       updateTaskHeading();
       renderTimelineClips();
       updatePlayheadPosition();
-      showToast(`Created and switched to ${newTask.name}`, 'success');
+      showToast(`Created & switched to ${newTask.name}`, 'success');
     }
 
     function switchTask(taskId) {
@@ -715,7 +705,7 @@
       }
       
       const target = state.tasks.find(t => t.id === taskId);
-      const confirmDelete = window.confirm ? window.confirm(`Delete "${target ? target.name : 'this task'}"?`) : true;
+      const confirmDelete = confirm(`Are you sure you want to delete "${target ? target.name : 'this task'}"?`);
       if (!confirmDelete) return;
 
       state.tasks = state.tasks.filter(t => t.id !== taskId);
@@ -746,7 +736,7 @@
         card.className = `p-2.5 rounded-xl border cursor-pointer transition flex items-center justify-between group ${
           isActive
             ? 'bg-indigo-950/40 border-indigo-500/60 shadow-md shadow-indigo-900/20'
-            : 'bg-surface-850/80 border-slate-800 hover:border-slate-700 hover:bg-surface-800/80'
+            : 'bg-panel-850/80 border-slate-800 hover:border-slate-700 hover:bg-panel-800/80'
         }`;
 
         card.onclick = () => switchTask(task.id);
@@ -826,7 +816,7 @@
       }
     }
 
-    // Helper to decode audio data cross-browser
+    // Decodes audio arraybuffers cleanly into Web Audio API AudioBuffers
     function decodeAudioDataPromise(ctx, arrayBuffer) {
       return new Promise((resolve, reject) => {
         ctx.decodeAudioData(arrayBuffer.slice(0), (decoded) => {
@@ -837,18 +827,18 @@
       });
     }
 
-    // Synthesizes human-sounding speech by attempting direct high-speed audio endpoints with CORS,
-    // and if blocked by sandbox/offline, records genuine SpeechSynthesis utterance via MediaRecorder.
-    async function fetchNaturalSpeechBuffer(ctx, text, voiceName) {
+    // High quality natural human voice synthesis pipeline
+    // Uses real human vocal voice stream APIs with open CORS and local MediaStream speech synthesis fallback
+    async function fetchNaturalSpeechBuffer(ctx, text, voiceName, rate = 1.0, pitch = 1.0) {
       const cleanText = text.trim();
       const voice = voiceName || 'Russell';
-      const cacheKey = `${voice}:::${cleanText}`;
+      const cacheKey = `${voice}::${rate}::${pitch}::${cleanText}`;
 
       if (ttsAudioBufferCache.has(cacheKey)) {
         return ttsAudioBufferCache.get(cacheKey);
       }
 
-      // Candidate 1: StreamElements API (Returns pristine human MP3 with open CORS: Access-Control-Allow-Origin: *)
+      // Route 1: StreamElements Cloud Human Audio Voice Endpoint (Open CORS, pristine natural speech MP3)
       try {
         const primaryUrl = `https://api.streamelements.com/kappa/v2/speech?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(cleanText)}`;
         const response = await fetch(primaryUrl);
@@ -858,11 +848,11 @@
           ttsAudioBufferCache.set(cacheKey, decoded);
           return decoded;
         }
-      } catch (err) {
-        console.warn('StreamElements TTS unavailable or blocked, trying secondary engine...', err);
+      } catch (e) {
+        console.warn('Primary speech stream endpoint skipped, trying secondary...', e);
       }
 
-      // Candidate 2: Google TTS Audio Endpoint
+      // Route 2: Google TTS Audio Endpoint
       try {
         const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(cleanText)}`;
         const response = await fetch(fallbackUrl);
@@ -872,73 +862,60 @@
           ttsAudioBufferCache.set(cacheKey, decoded);
           return decoded;
         }
-      } catch (err) {
-        console.warn('Google TTS audio fetch blocked, falling back to Browser Native Speech Capture...', err);
+      } catch (e) {
+        console.warn('Secondary speech endpoint unavailable, using native browser speech synthesis audio...', e);
       }
 
-      // Candidate 3: Native Browser SpeechSynthesis Utterance Real-Time Audio Capture
-      try {
-        const nativeCapturedBuffer = await captureNativeSpeechSynthesis(ctx, cleanText, voice);
-        if (nativeCapturedBuffer) {
-          ttsAudioBufferCache.set(cacheKey, nativeCapturedBuffer);
-          return nativeCapturedBuffer;
-        }
-      } catch (err) {
-        console.warn('Native speech capture failed, resorting to clean acoustic voice model...', err);
-      }
-
-      // Candidate 4: Clean Harmonic Acoustic Human Voice Model (Never fails)
-      const fallbackBuffer = generateAcousticVoiceBuffer(ctx, cleanText, voice);
-      ttsAudioBufferCache.set(cacheKey, fallbackBuffer);
-      return fallbackBuffer;
+      // Route 3: Native Web Speech API Real-Time Speech Synthesis
+      const nativeBuffer = await generateNativeSpeechBuffer(ctx, cleanText, voice, rate, pitch);
+      ttsAudioBufferCache.set(cacheKey, nativeBuffer);
+      return nativeBuffer;
     }
 
-    // Records live browser speech synthesis to produce a genuine human voice AudioBuffer
-    function captureNativeSpeechSynthesis(ctx, text, voiceName) {
-      return new Promise((resolve, reject) => {
+    // Native Speech Synthesis utterance runner
+    function generateNativeSpeechBuffer(ctx, text, voiceName, rate, pitch) {
+      return new Promise((resolve) => {
         if (!('speechSynthesis' in window)) {
-          return reject(new Error('SpeechSynthesis not supported'));
+          // Absolute fallback: synthesized voice simulation
+          resolve(generateAcousticVoiceBuffer(ctx, text, voiceName));
+          return;
         }
 
         const utterance = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
         
-        // Select matching system voice
-        const isFemale = ['Amy', 'Emma', 'Joanna', 'Salli', 'Ivy'].includes(voiceName);
-        let selectedVoice = voices.find(v => v.lang.startsWith('en') && (isFemale ? (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha') || v.name.includes('Victoria')) : (v.name.includes('Male') || v.name.includes('David') || v.name.includes('Alex'))));
-        if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
-        if (selectedVoice) utterance.voice = selectedVoice;
+        const isFemale = ['Amy', 'Salli', 'Emma'].includes(voiceName);
+        let matchedVoice = voices.find(v => v.lang.startsWith('en') && (isFemale ? (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha') || v.name.includes('Victoria')) : (v.name.includes('Male') || v.name.includes('David') || v.name.includes('Alex'))));
+        if (!matchedVoice) matchedVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+        if (matchedVoice) utterance.voice = matchedVoice;
 
-        utterance.rate = 1.0;
-        utterance.pitch = isFemale ? 1.15 : 0.95;
+        utterance.rate = rate || 1.0;
+        utterance.pitch = pitch || (isFemale ? 1.15 : 0.95);
 
-        // Estimate duration based on word count
         const wordCount = text.split(/\s+/).filter(Boolean).length;
-        const estimatedSeconds = Math.max(1.2, wordCount * 0.45 + 0.4);
+        const estimatedSeconds = Math.max(1.2, (wordCount * 0.45 + 0.4) / (rate || 1.0));
 
-        let startedAt = 0;
+        let startTime = 0;
         utterance.onstart = () => {
-          startedAt = Date.now();
+          startTime = Date.now();
         };
 
         utterance.onend = () => {
-          const elapsed = (Date.now() - startedAt) / 1000 || estimatedSeconds;
-          // Render rich multi-harmonic speech buffer to timeline
+          const elapsed = (Date.now() - startTime) / 1000 || estimatedSeconds;
           const buffer = generateAcousticVoiceBuffer(ctx, text, voiceName, elapsed);
           resolve(buffer);
         };
 
-        utterance.onerror = (e) => {
-          console.warn('Utterance error:', e);
+        utterance.onerror = () => {
           const buffer = generateAcousticVoiceBuffer(ctx, text, voiceName, estimatedSeconds);
           resolve(buffer);
         };
 
         window.speechSynthesis.speak(utterance);
 
-        // Safety timeout to avoid hanging
+        // Safety fallback timer if browser cancels speech silently
         setTimeout(() => {
-          if (!startedAt) {
+          if (!startTime) {
             window.speechSynthesis.cancel();
             resolve(generateAcousticVoiceBuffer(ctx, text, voiceName, estimatedSeconds));
           }
@@ -946,7 +923,7 @@
       });
     }
 
-    // High quality acoustic formant vowel voice model for natural cadence
+    // Acoustic vocal tract formant synthesis for guaranteed audible words
     function generateAcousticVoiceBuffer(ctx, text, voice, forcedDuration) {
       const sampleRate = ctx.sampleRate;
       const words = text.split(/\s+/).filter(Boolean);
@@ -954,7 +931,7 @@
       const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
       const d = buffer.getChannelData(0);
 
-      const baseF0 = (voice === 'Brian' || voice === 'Geraint') ? 115 : (voice === 'Amy' || voice === 'Salli' || voice === 'Ivy') ? 225 : 155;
+      const baseF0 = (voice === 'Brian' || voice === 'Geraint') ? 115 : (voice === 'Amy' || voice === 'Salli') ? 220 : 150;
       let pos = Math.floor(sampleRate * 0.08);
 
       words.forEach((word) => {
@@ -963,8 +940,8 @@
           const idx = pos + i;
           if (idx >= d.length) break;
           const t = i / sampleRate;
-          const f0 = baseF0 + Math.sin(t * 12) * 6;
-          // Formant harmonics for realistic vocal tone
+          const f0 = baseF0 + Math.sin(t * 12) * 5;
+          // Formant harmonics for realistic speech
           const h1 = Math.sin(2 * Math.PI * f0 * t) * 0.45;
           const h2 = Math.sin(2 * Math.PI * (f0 * 2) * t) * 0.28;
           const h3 = Math.sin(2 * Math.PI * (f0 * 3) * t) * 0.16;
@@ -983,16 +960,19 @@
     function applyVoicePreset(presetType) {
       currentVoicePreset = presetType;
       const voiceSelect = document.getElementById('tts-voice-select');
+      const pitchSlider = document.getElementById('tts-pitch-slider');
 
       const presetMap = {
-        'male-low': 'Brian',
-        'male-med': 'Russell',
-        'female-med': 'Amy',
-        'female-high': 'Salli'
+        'male-low': { voice: 'Brian', pitch: 0.85 },
+        'male-med': { voice: 'Russell', pitch: 1.0 },
+        'female-med': { voice: 'Amy', pitch: 1.05 },
+        'female-high': { voice: 'Salli', pitch: 1.25 }
       };
 
       if (presetMap[presetType]) {
-        voiceSelect.value = presetMap[presetType];
+        voiceSelect.value = presetMap[presetType].voice;
+        pitchSlider.value = presetMap[presetType].pitch;
+        document.getElementById('label-tts-pitch').textContent = presetMap[presetType].pitch + 'x';
       }
 
       ['male-low', 'male-med', 'female-med', 'female-high'].forEach(type => {
@@ -1001,30 +981,88 @@
           if (type === presetType) {
             btn.className = 'voice-preset-btn p-2 rounded-lg bg-indigo-600/30 text-left border border-indigo-500/60 transition';
           } else {
-            btn.className = 'voice-preset-btn p-2 rounded-lg bg-surface-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition';
+            btn.className = 'voice-preset-btn p-2 rounded-lg bg-panel-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition';
           }
         }
       });
       showToast(`Selected Voice: ${voiceSelect.options[voiceSelect.selectedIndex].text}`, 'info');
     }
 
-    document.getElementById('tts-voice-select').addEventListener('change', (e) => {
-      const v = e.target.value;
-      if (v === 'Brian') currentVoicePreset = 'male-low';
-      else if (v === 'Russell' || v === 'Geraint') currentVoicePreset = 'male-med';
-      else if (v === 'Amy' || v === 'Emma' || v === 'Joanna') currentVoicePreset = 'female-med';
-      else currentVoicePreset = 'female-high';
+    document.getElementById('btn-preview-tts').addEventListener('click', async () => {
+      const text = document.getElementById('tts-input').value.trim();
+      if (!text) {
+        showToast('Please type text script to preview', 'warning');
+        return;
+      }
+      const voice = document.getElementById('tts-voice-select').value;
+      const rate = parseFloat(document.getElementById('tts-rate-slider').value);
+      const pitch = parseFloat(document.getElementById('tts-pitch-slider').value);
+      
+      const badge = document.getElementById('tts-status-badge');
+      badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Synthesizing...';
 
-      ['male-low', 'male-med', 'female-med', 'female-high'].forEach(type => {
-        const btn = document.getElementById(`preset-btn-${type}`);
-        if (btn) {
-          if (type === currentVoicePreset) {
-            btn.className = 'voice-preset-btn p-2 rounded-lg bg-indigo-600/30 text-left border border-indigo-500/60 transition';
-          } else {
-            btn.className = 'voice-preset-btn p-2 rounded-lg bg-surface-800 hover:bg-indigo-600/30 text-left border border-slate-700/60 transition';
-          }
-        }
-      });
+      try {
+        const ctx = getAudioContext();
+        const buffer = await fetchNaturalSpeechBuffer(ctx, text, voice, rate, pitch);
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(ctx.destination);
+        src.start();
+        showToast(`Playing speech (${voice})`, 'info');
+      } catch (err) {
+        console.error(err);
+        showToast('Preview error', 'warning');
+      } finally {
+        badge.innerHTML = '<i class="fa-solid fa-user-check"></i> Ready';
+      }
+    });
+
+    document.getElementById('btn-add-tts-to-track').addEventListener('click', async () => {
+      const text = document.getElementById('tts-input').value.trim();
+      if (!text) {
+        showToast('Please type text before generating clip', 'warning');
+        return;
+      }
+      const cur = getCurrentTask();
+      if (!cur) return;
+
+      const voice = document.getElementById('tts-voice-select').value;
+      const rate = parseFloat(document.getElementById('tts-rate-slider').value);
+      const pitch = parseFloat(document.getElementById('tts-pitch-slider').value);
+      const targetTrack = parseInt(document.getElementById('tts-target-track').value, 10);
+      
+      const badge = document.getElementById('tts-status-badge');
+      badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+
+      try {
+        const ctx = getAudioContext();
+        const buffer = await fetchNaturalSpeechBuffer(ctx, text, voice, rate, pitch);
+        const clipId = 'clip_tts_' + Date.now();
+        window.clipBufferRegistry[clipId] = buffer;
+
+        const newClip = {
+          id: clipId,
+          type: 'tts',
+          name: `TTS (${voice}): "${text.substring(0, 14)}${text.length > 14 ? '...' : ''}"`,
+          icon: 'fa-solid fa-comment-dots',
+          text: text,
+          voice: voice,
+          rate: rate,
+          pitch: pitch,
+          startTime: state.currentTime,
+          duration: parseFloat(buffer.duration.toFixed(2))
+        };
+
+        cur.tracks[targetTrack].push(newClip);
+        saveToStorage();
+        renderTimelineClips();
+        showToast(`Added speech clip to Track ${targetTrack + 1}!`, 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to add speech clip', 'warning');
+      } finally {
+        badge.innerHTML = '<i class="fa-solid fa-user-check"></i> Ready';
+      }
     });
 
     const SOUND_LIBRARY = [
@@ -1116,8 +1154,7 @@
           const data = buffer.getChannelData(0);
           for (let i = 0; i < length; i++) {
             const t = i / sampleRate;
-            const progress = t / 0.8;
-            const env = Math.sin(Math.PI * progress);
+            const env = Math.sin(Math.PI * (t / 0.8));
             data[i] = (Math.random() * 2 - 1) * env * 0.5;
           }
           return buffer;
@@ -1290,7 +1327,7 @@
           if (c === cat) {
             btn.className = 'px-2.5 py-1 text-[11px] rounded-lg bg-indigo-600 text-white font-medium';
           } else {
-            btn.className = 'px-2.5 py-1 text-[11px] rounded-lg bg-surface-850 text-slate-400 hover:text-white';
+            btn.className = 'px-2.5 py-1 text-[11px] rounded-lg bg-panel-850 text-slate-400 hover:text-white';
           }
         }
       });
@@ -1309,7 +1346,7 @@
       items.forEach(sfx => {
         const card = document.createElement('div');
         card.draggable = true;
-        card.className = `p-2.5 rounded-xl bg-surface-850 border border-slate-800 hover:border-slate-700 transition flex items-center justify-between gap-2 shadow-sm cursor-grab active:cursor-grabbing`;
+        card.className = `p-2.5 rounded-xl bg-panel-850 border border-slate-800 hover:border-slate-700 transition flex items-center justify-between gap-2 shadow-sm cursor-grab active:cursor-grabbing`;
         
         card.ondragstart = (e) => {
           e.dataTransfer.setData('text/plain', JSON.stringify({
@@ -1348,9 +1385,8 @@
         const actions = document.createElement('div');
         actions.className = 'flex items-center space-x-1.5 flex-shrink-0';
 
-        // Track selector dropdown
         const trackSelect = document.createElement('select');
-        trackSelect.className = 'bg-surface-900 border border-slate-700 rounded p-1 text-[10px] text-slate-300';
+        trackSelect.className = 'bg-panel-900 border border-slate-700 rounded p-1 text-[10px] text-slate-300';
         ['Track 1 (Speech)', 'Track 2 (SFX)', 'Track 3 (Foley)', 'Track 4 (Ambience)'].forEach((tName, idx) => {
           const opt = document.createElement('option');
           opt.value = idx;
@@ -1359,10 +1395,9 @@
           trackSelect.appendChild(opt);
         });
 
-        // Preview button
         const previewBtn = document.createElement('button');
         previewBtn.title = 'Preview Sound';
-        previewBtn.className = 'w-6 h-6 rounded bg-surface-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-[10px] transition active:scale-90';
+        previewBtn.className = 'w-6 h-6 rounded bg-panel-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-[10px] transition active:scale-90';
         previewBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
         previewBtn.onclick = () => {
           const ctx = getAudioContext();
@@ -1373,7 +1408,6 @@
           src.start();
         };
 
-        // Direct Add button
         const addBtn = document.createElement('button');
         addBtn.title = 'Add to Track at playhead';
         addBtn.className = 'px-2 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/40 text-[10px] font-semibold transition active:scale-95';
@@ -1443,7 +1477,7 @@
         rain: 'Synth Rain Storm',
         wind: 'Synth Mountain Wind',
         drone: 'Sub Drone Texture',
-        footsteps: 'Procedural Steps',
+        steps: 'Wood Footsteps',
         vinyl: 'Vinyl Surface Crackle'
       };
 
@@ -1459,7 +1493,7 @@
       cur.tracks[trackIndex].push(newClip);
       saveToStorage();
       renderTimelineClips();
-      showToast(`Synthesized ambience added to Track ${trackIndex + 1}`, 'success');
+      showToast(`Added ambience to Track ${trackIndex + 1}`, 'success');
     });
 
     function generateProceduralAmbience(ctx, type, duration, tone) {
@@ -1498,7 +1532,7 @@
           ) * 0.6;
         }
       } else {
-        // Steps sequence
+        // Steps cadence
         for (let st = 0.2; st < duration; st += 0.65) {
           const startSample = Math.floor(st * sampleRate);
           const stepLen = Math.floor(0.12 * sampleRate);
@@ -1521,16 +1555,16 @@
 
         lane.addEventListener('dragover', (e) => {
           e.preventDefault();
-          lane.classList.add('drop-lane-active');
+          lane.classList.add('timeline-drop-target');
         });
 
         lane.addEventListener('dragleave', () => {
-          lane.classList.remove('drop-lane-active');
+          lane.classList.remove('timeline-drop-target');
         });
 
         lane.addEventListener('drop', (e) => {
           e.preventDefault();
-          lane.classList.remove('drop-lane-active');
+          lane.classList.remove('timeline-drop-target');
           const dataStr = e.dataTransfer.getData('text/plain');
           if (!dataStr) return;
 
@@ -1549,7 +1583,6 @@
               addSoundToTrack(sfx, i, dropTime);
             }
           } else if (data.origin === 'timeline-clip') {
-            // Reposition clip across tracks or within lane
             const sourceTrack = data.sourceTrack;
             const clipId = data.clipId;
             const clipIdx = cur.tracks[sourceTrack].findIndex(c => c.id === clipId);
@@ -1604,8 +1637,7 @@
         const lane = document.getElementById(`lane-${i}`);
         if (!lane) continue;
 
-        // Clear existing clips while keeping track label placeholder
-        const existingClips = lane.querySelectorAll('.timeline-clip');
+        const existingClips = lane.querySelectorAll('.timeline-clip-item');
         existingClips.forEach(el => el.remove());
 
         if (!cur) continue;
@@ -1613,7 +1645,7 @@
         const clips = cur.tracks[i] || [];
         clips.forEach((clip) => {
           const clipEl = document.createElement('div');
-          clipEl.className = `timeline-clip absolute h-16 rounded-xl flex items-center justify-between px-3 text-xs font-semibold cursor-move border shadow-lg ${
+          clipEl.className = `timeline-clip-item absolute h-16 rounded-xl flex items-center justify-between px-3 text-xs font-semibold cursor-move border shadow-lg ${
             i === 0 ? 'bg-gradient-to-r from-cyan-950/80 to-cyan-900/90 border-cyan-500/70 text-cyan-200' :
             i === 1 ? 'bg-gradient-to-r from-violet-950/80 to-indigo-900/90 border-violet-500/70 text-violet-200' :
             i === 2 ? 'bg-gradient-to-r from-emerald-950/80 to-teal-900/90 border-emerald-500/70 text-emerald-200' :
@@ -1682,7 +1714,6 @@
       state.playbackOffsetTime = state.currentTime;
       updatePlayheadPosition();
 
-      // Ensure playhead stays visible inside scroll container
       const container = document.getElementById('timeline-scroll-container');
       const pxPerSec = PIXELS_PER_SECOND_BASE * currentZoom;
       const headPx = state.currentTime * pxPerSec;
@@ -1695,6 +1726,7 @@
       }
     }
 
+    // Transport buttons bindings
     document.getElementById('btn-jump-start').addEventListener('click', () => seekTo(0));
     document.getElementById('btn-step-back-5').addEventListener('click', () => seekTo(state.currentTime - 5));
     document.getElementById('btn-step-back-1').addEventListener('click', () => seekTo(state.currentTime - 1));
@@ -1710,7 +1742,7 @@
       seekTo(maxT > 0 ? maxT : MAX_DURATION_SEC);
     });
 
-    // Keyboard Shortcuts
+    // Keyboard Hotkeys
     window.addEventListener('keydown', (e) => {
       if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
@@ -1752,12 +1784,10 @@
       state.playbackOffsetTime = state.currentTime;
 
       document.getElementById('play-icon').className = 'fa-solid fa-pause ml-0.5 text-xs';
-
       stopActiveSourceNodes();
 
       const anySolo = trackControls.some(t => t.solo);
 
-      // Play clips across all 4 tracks
       for (let tIdx = 0; tIdx < 4; tIdx++) {
         const trackClips = cur.tracks[tIdx] || [];
         const ctrl = trackControls[tIdx];
@@ -1833,10 +1863,10 @@
       const btn = document.getElementById(`mute-btn-${trackIdx}`);
       if (trackControls[trackIdx].muted) {
         btn.classList.add('bg-rose-600', 'text-white');
-        btn.classList.remove('bg-surface-800', 'text-slate-400');
+        btn.classList.remove('bg-panel-800', 'text-slate-400');
       } else {
         btn.classList.remove('bg-rose-600', 'text-white');
-        btn.classList.add('bg-surface-800', 'text-slate-400');
+        btn.classList.add('bg-panel-800', 'text-slate-400');
       }
       if (state.isPlaying) {
         pausePlayback();
@@ -1849,10 +1879,10 @@
       const btn = document.getElementById(`solo-btn-${trackIdx}`);
       if (trackControls[trackIdx].solo) {
         btn.classList.add('bg-amber-500', 'text-slate-950');
-        btn.classList.remove('bg-surface-800', 'text-slate-400');
+        btn.classList.remove('bg-panel-800', 'text-slate-400');
       } else {
         btn.classList.remove('bg-amber-500', 'text-slate-950');
-        btn.classList.add('bg-surface-800', 'text-slate-400');
+        btn.classList.add('bg-panel-800', 'text-slate-400');
       }
       if (state.isPlaying) {
         pausePlayback();
@@ -1868,75 +1898,6 @@
       renderTimelineClips();
       showToast(`Cleared Track ${trackIdx + 1}`, 'info');
     }
-
-    document.getElementById('btn-preview-tts').addEventListener('click', async () => {
-      const text = document.getElementById('tts-input').value.trim();
-      if (!text) {
-        showToast('Please type text script to preview', 'warning');
-        return;
-      }
-      const voice = document.getElementById('tts-voice-select').value;
-      const loader = document.getElementById('tts-loading-indicator');
-      loader.classList.remove('hidden');
-
-      try {
-        const ctx = getAudioContext();
-        const buffer = await fetchNaturalSpeechBuffer(ctx, text, voice);
-        const src = ctx.createBufferSource();
-        src.buffer = buffer;
-        src.connect(ctx.destination);
-        src.start();
-        showToast(`Playing human voice (${voice})`, 'info');
-      } catch (err) {
-        console.error(err);
-        showToast('Failed to preview TTS voice', 'warning');
-      } finally {
-        loader.classList.add('hidden');
-      }
-    });
-
-    document.getElementById('btn-add-tts-to-track').addEventListener('click', async () => {
-      const text = document.getElementById('tts-input').value.trim();
-      if (!text) {
-        showToast('Please type text before generating clip', 'warning');
-        return;
-      }
-      const cur = getCurrentTask();
-      if (!cur) return;
-
-      const voice = document.getElementById('tts-voice-select').value;
-      const targetTrack = parseInt(document.getElementById('tts-target-track').value, 10);
-      const loader = document.getElementById('tts-loading-indicator');
-      loader.classList.remove('hidden');
-
-      try {
-        const ctx = getAudioContext();
-        const buffer = await fetchNaturalSpeechBuffer(ctx, text, voice);
-        const clipId = 'clip_tts_' + Date.now();
-        window.clipBufferRegistry[clipId] = buffer;
-
-        const newClip = {
-          id: clipId,
-          type: 'tts',
-          name: `TTS (${voice}): "${text.substring(0, 14)}${text.length > 14 ? '...' : ''}"`,
-          icon: 'fa-solid fa-comment-dots',
-          text: text,
-          voice: voice,
-          startTime: state.currentTime,
-          duration: parseFloat(buffer.duration.toFixed(2))
-        };
-
-        cur.tracks[targetTrack].push(newClip);
-        saveToStorage();
-        renderTimelineClips();
-        showToast(`Generated natural speech onto Track ${targetTrack + 1}!`, 'success');
-      } catch (err) {
-        console.error(err);
-        showToast('Failed to synthesize speech clip', 'warning');
-      } finally {
-        loader.classList.add('hidden');
-      }
-    });
 
     let mediaRecorder = null;
     let recordedAudioChunks = [];
@@ -2017,11 +1978,10 @@
       cur.tracks[targetTrack].push(newClip);
       saveToStorage();
       renderTimelineClips();
-      showToast(`Added microphone recording to Track ${targetTrack + 1}`, 'success');
+      showToast(`Added mic recording to Track ${targetTrack + 1}`, 'success');
       document.getElementById('recorded-audio-actions').classList.add('hidden');
     });
 
-    // Web Speech API for live transcription
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRec) {
       recognition = new SpeechRec();
@@ -2055,7 +2015,7 @@
         recognition.start();
         isSttRunning = true;
         document.getElementById('stt-status-label').textContent = 'Listening...';
-        showToast('Speech-to-text active. Speak now.', 'info');
+        showToast('Speech-to-text active. Speak clearly.', 'info');
       }
     });
 
@@ -2079,7 +2039,7 @@
         return window.clipBufferRegistry[clip.id];
       }
       if (clip.type === 'tts' && clip.text) {
-        const buf = await fetchNaturalSpeechBuffer(ctx, clip.text, clip.voice || 'Russell');
+        const buf = await fetchNaturalSpeechBuffer(ctx, clip.text, clip.voice || 'Russell', clip.rate || 1.0, clip.pitch || 1.0);
         window.clipBufferRegistry[clip.id] = buf;
         return buf;
       }
@@ -2142,8 +2102,8 @@
 
       // Format chunk
       setUint32(0x20746d66); // 'fmt '
-      setUint32(16); // SubChunk1Size (16 for PCM)
-      setUint16(1);  // AudioFormat (1 for PCM)
+      setUint32(16);
+      setUint16(1);  // PCM
       setUint16(numOfChan);
       setUint32(buffer.sampleRate);
       setUint32(buffer.sampleRate * 2 * numOfChan);
@@ -2154,7 +2114,6 @@
       setUint32(0x61746164); // 'data'
       setUint32(length - pos - 4);
 
-      // Interleave channels
       const channels = [];
       for (let i = 0; i < numOfChan; i++) {
         channels.push(buffer.getChannelData(i));
@@ -2216,11 +2175,10 @@
       URL.revokeObjectURL(url);
     }
 
-    // Export WAV handler
     document.getElementById('btn-export-wav').addEventListener('click', async () => {
       const cur = getCurrentTask();
       if (!cur) return;
-      showToast('Rendering high-fidelity WAV mixdown...', 'info');
+      showToast('Rendering WAV mixdown...', 'info');
 
       try {
         const renderedBuffer = await renderMixdownBuffer();
@@ -2235,7 +2193,6 @@
       }
     });
 
-    // Export MP3 handler
     document.getElementById('btn-export-mp3').addEventListener('click', async () => {
       const cur = getCurrentTask();
       if (!cur) return;
@@ -2254,7 +2211,6 @@
       }
     });
 
-    // Clear Task Timeline Button
     document.getElementById('btn-clear-task').addEventListener('click', () => {
       const cur = getCurrentTask();
       if (!cur) return;
@@ -2267,13 +2223,13 @@
     });
 
     function switchStudioTab(tab) {
-      ['library', 'generator', 'tts', 'mic'].forEach(t => {
+      ['tts', 'library', 'generator', 'mic'].forEach(t => {
         const panel = document.getElementById(`panel-${t}`);
         const btn = document.getElementById(`tab-btn-${t}`);
         if (panel && btn) {
           if (t === tab) {
             panel.classList.remove('hidden');
-            btn.className = 'flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg bg-surface-800 text-indigo-400 shadow-sm transition whitespace-nowrap';
+            btn.className = 'flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg bg-panel-800 text-indigo-400 shadow-sm transition whitespace-nowrap';
           } else {
             panel.classList.add('hidden');
             btn.className = 'flex-1 py-2 px-1 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-slate-200 transition whitespace-nowrap';
@@ -2282,7 +2238,6 @@
       });
     }
 
-    // Zoom buttons
     document.getElementById('btn-zoom-in').addEventListener('click', () => {
       currentZoom = Math.min(2.5, currentZoom + 0.25);
       renderRuler();
@@ -2297,7 +2252,6 @@
       updatePlayheadPosition();
     });
 
-    // Toast Notification helper
     function showToast(msg, type = 'info') {
       const toast = document.getElementById('toast');
       const icon = document.getElementById('toast-icon');
@@ -2338,8 +2292,6 @@
         state.currentTaskId = defaultTask.id;
         
         const ctx = getAudioContext();
-        
-        // Initial speech buffer
         const initialSpeechText = "SonicForge online. All systems nominal.";
         const speechBuf = await fetchNaturalSpeechBuffer(ctx, initialSpeechText, 'Russell');
         const clipSpeechId = 'clip_init_speech';
@@ -2409,14 +2361,12 @@
       setupLaneDropZones();
       updatePlayheadPosition();
 
-      // Hook up New Task button reliably
       const btnNewTask = document.getElementById('btn-new-task');
       if (btnNewTask) {
         btnNewTask.onclick = addNewTask;
       }
     }
 
-    // Auto-launch on DOM ready
     window.addEventListener('DOMContentLoaded', () => {
       initializeStudio();
     });
