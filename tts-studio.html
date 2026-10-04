@@ -3,17 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Speech Studio & Timeline Workstation</title>
+  <title>Speech Studio Producer</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
   <style>
     body { background-color: #0d1117; color: #c9d1d9; font-family: system-ui, -apple-system, sans-serif; user-select: none; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
     ::-webkit-scrollbar-track { background: #161b22; }
     .timeline-grid {
-      background-size: 40px 100%;
+      background-size: 30px 100%;
       background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
     }
   </style>
@@ -30,9 +29,9 @@
         </div>
         <div>
           <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-            Speech Studio & Timeline <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v11.0 Slot Master</span>
+            Speech Studio Producer <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">DATA ENGINE</span>
           </h1>
-          <p class="text-xs text-slate-400">Sequenced human dialogue studio for SoundForge DAW</p>
+          <p class="text-xs text-slate-400">Generate and export .speech timeline sequence files</p>
         </div>
       </div>
       <span class="text-xs px-2.5 py-1 bg-emerald-950/80 text-emerald-400 border border-emerald-800 rounded-full font-mono flex items-center gap-1.5">
@@ -40,18 +39,18 @@
       </span>
     </div>
 
-    <!-- VOICE DICTATION QUICK BAR -->
+    <!-- VOICE DICTATION -->
     <div class="flex items-center justify-between bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
       <div class="text-xs text-slate-300">
         <span class="font-semibold block text-white">Voice Dictation (Speech-to-Text)</span>
-        <span id="stt-status-text">Dictate with your mic to convert spoken words into dialogue below.</span>
+        <span id="stt-status-text">Dictate into your mic to append speech dialogue below.</span>
       </div>
       <button id="btn-stt" class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 rounded-lg text-xs font-bold border border-[#30363d] flex items-center gap-1.5 transition">
         <i class="fa-solid fa-microphone" id="stt-mic-icon"></i> <span id="stt-label">Dictate Text</span>
       </button>
     </div>
 
-    <!-- SCRIPT INPUT AREA -->
+    <!-- DIALOGUE SCRIPT INPUT -->
     <div>
       <div class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-1.5">
         <span>Dialogue Segment Input:</span>
@@ -78,23 +77,23 @@
       </div>
     </div>
 
-    <!-- ACTION BUTTONS -->
+    <!-- ACTIONS -->
     <div class="flex items-center gap-3">
       <button id="btn-preview-line" class="flex-1 py-2 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-[#30363d] transition">
-        <i class="fa-solid fa-volume-high text-xs" id="preview-icon"></i> Preview Line
+        <i class="fa-solid fa-volume-high text-xs" id="preview-icon"></i> Audition Line
       </button>
 
       <button id="btn-add-to-track" class="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/30 transition">
-        <i class="fa-solid fa-plus text-xs"></i> Place Clip on Voice Track
+        <i class="fa-solid fa-plus text-xs"></i> Place Clip on Timeline
       </button>
     </div>
 
-    <!-- MINI TIMELINE TRACK -->
+    <!-- TIMELINE WORKSPACE -->
     <div class="bg-[#0d1117] p-3 rounded-xl border border-[#30363d] space-y-3">
       <div class="flex items-center justify-between border-b border-[#30363d] pb-2">
         <div class="flex items-center gap-2">
           <i class="fa-solid fa-sliders text-cyan-400 text-xs"></i>
-          <span class="text-xs font-bold text-white uppercase tracking-wider">Voice Track 1 (Master Sequence)</span>
+          <span class="text-xs font-bold text-white uppercase tracking-wider">Voice Track Sequencer</span>
           <span class="text-[11px] text-slate-500" id="clip-count-label">0 clips</span>
         </div>
         <div class="flex items-center gap-3">
@@ -107,20 +106,18 @@
 
       <!-- VISUAL TIMELINE LANE -->
       <div class="h-24 bg-[#161b22] border border-[#30363d] rounded-lg relative overflow-x-auto overflow-y-hidden timeline-grid p-1" id="timeline-scroll-lane">
-        <!-- Playhead -->
         <div id="playhead" class="absolute top-0 bottom-0 w-[2px] bg-rose-500 z-20 pointer-events-none transition-all duration-75" style="left: 0px;">
           <div class="w-2.5 h-2.5 bg-rose-500 rounded-full -ml-[4px] -mt-1 shadow-sm"></div>
         </div>
-        <!-- Clip items injected here -->
         <div id="clips-lane" class="h-full relative min-w-full flex items-center">
-          <div class="text-xs text-slate-500 italic pl-3" id="timeline-empty-notice">No clips placed yet. Click "Place Clip on Voice Track" to build your timeline.</div>
+          <div class="text-xs text-slate-500 italic pl-3" id="timeline-empty-notice">No clips placed yet.</div>
         </div>
       </div>
 
-      <!-- TIMELINE TRANSPORT CONTROLS -->
+      <!-- TRANSPORT CONTROLS -->
       <div class="flex items-center justify-between pt-1">
         <div class="flex items-center space-x-2">
-          <button id="btn-jump-start" title="Rewind to start" class="w-8 h-8 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-slate-300 text-xs flex items-center justify-center transition">
+          <button id="btn-jump-start" title="Rewind" class="w-8 h-8 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-slate-300 text-xs flex items-center justify-center transition">
             <i class="fa-solid fa-backward-step"></i>
           </button>
           <button id="btn-play-pause-timeline" class="px-3.5 h-8 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition disabled:opacity-50" disabled>
@@ -134,51 +131,28 @@
       </div>
     </div>
 
-    <!-- SAVED MASTER SLOT & EXPORT CARD -->
-    <div class="bg-[#0d1117] p-3.5 rounded-xl border border-[#30363d] space-y-3">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-2.5">
-          <div class="w-3 h-3 rounded-full bg-slate-600" id="slot-indicator"></div>
-          <div>
-            <div class="text-xs font-bold text-white flex items-center gap-2">
-              Saved Master Slot <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono" id="slot-badge">Empty</span>
-            </div>
-            <div class="text-[11px] text-slate-400" id="slot-details">Record the timeline to commit it into this download slot.</div>
-          </div>
-        </div>
-        <button id="btn-record-to-slot" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition disabled:opacity-50" disabled>
-          <i class="fa-solid fa-circle text-[10px]"></i> Record Timeline to Slot
-        </button>
+    <!-- DATA EXPORT (ZERO BINARY ENCODING, ZERO LATENCY) -->
+    <div class="border-t border-[#30363d] pt-4 space-y-2">
+      <div class="text-[11px] text-slate-400 flex items-center justify-between">
+        <span>Save Timeline as Native Data File:</span>
+        <span id="export-status" class="text-emerald-400 font-medium"></span>
       </div>
-
-      <!-- EXPORT ACTIONS (ACTIVATED UPON COMMIT) -->
-      <div class="grid grid-cols-2 gap-3 pt-1 border-t border-[#21262d]">
-        <button id="btn-download-wav" class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-          <i class="fa-solid fa-file-arrow-down text-sm"></i> Download WAV (16-bit)
-        </button>
-
-        <button id="btn-download-mp3" class="py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-          <i class="fa-solid fa-file-audio text-sm"></i> Download MP3 (192kbps)
-        </button>
-      </div>
-      <div class="text-[11px] text-emerald-400 font-medium text-center" id="export-status"></div>
+      
+      <button id="btn-export-speech-file" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+        <i class="fa-solid fa-file-code text-sm"></i> Save Timeline Sequence (.speech file)
+      </button>
     </div>
 
   </div>
 
   <script>
-    /* ==========================================================================
-       GLOBAL STATE & CONFIGURATION
-       ========================================================================== */
-    const PIXELS_PER_SECOND = 30;
+    const PIXELS_PER_SECOND = 24;
     let availableVoices = [];
     let trackClips = [];
     let isPlayingTimeline = false;
     let currentClipIndex = -1;
     let timelinePlayheadTime = 0;
     let timerInterval = null;
-
-    let savedSlotBuffer = null; // Committed master audio buffer
 
     const ttsInput = document.getElementById('tts-input');
     const voiceSelect = document.getElementById('voice-preset');
@@ -187,13 +161,7 @@
     const btnPlayPause = document.getElementById('btn-play-pause-timeline');
     const transportStatus = document.getElementById('transport-status');
     const timeDisplay = document.getElementById('timeline-time-display');
-
-    const btnRecordToSlot = document.getElementById('btn-record-to-slot');
-    const btnDownloadWav = document.getElementById('btn-download-wav');
-    const btnDownloadMp3 = document.getElementById('btn-download-mp3');
-    const slotIndicator = document.getElementById('slot-indicator');
-    const slotBadge = document.getElementById('slot-badge');
-    const slotDetails = document.getElementById('slot-details');
+    const btnExportSpeech = document.getElementById('btn-export-speech-file');
     const exportStatus = document.getElementById('export-status');
 
     ttsInput.oninput = () => {
@@ -201,7 +169,6 @@
     };
     ttsInput.oninput();
 
-    // Populate Real Operating System Voices
     function loadVoices() {
       if (!('speechSynthesis' in window)) return;
       availableVoices = window.speechSynthesis.getVoices();
@@ -213,7 +180,7 @@
       availableVoices.forEach((voice, index) => {
         const opt = document.createElement('option');
         opt.value = index;
-        opt.textContent = `${voice.name} (${voice.lang})${voice.default ? ' [Default]' : ''}`;
+        opt.textContent = `${voice.name} (${voice.lang})`;
 
         if (/en[-_]AU/i.test(voice.lang) || /Russell|Amy|Catherine|James|Karen/i.test(voice.name)) {
           defaultIdx = index;
@@ -229,9 +196,7 @@
       loadVoices();
     }
 
-    /* ==========================================================================
-       PREVIEW SINGLE LINE (PURE SYSTEM VOICE)
-       ========================================================================== */
+    // AUDITION SINGLE LINE
     document.getElementById('btn-preview-line').onclick = () => {
       const text = ttsInput.value.trim();
       if (!text) return alert('Enter dialogue text to preview.');
@@ -248,25 +213,21 @@
       const previewIcon = document.getElementById('preview-icon');
       previewIcon.className = 'fa-solid fa-volume-high text-cyan-400 animate-pulse text-xs';
 
-      utterance.onend = () => {
-        previewIcon.className = 'fa-solid fa-volume-high text-xs';
-      };
-      utterance.onerror = () => {
-        previewIcon.className = 'fa-solid fa-volume-high text-xs';
-      };
+      utterance.onend = () => previewIcon.className = 'fa-solid fa-volume-high text-xs';
+      utterance.onerror = () => previewIcon.className = 'fa-solid fa-volume-high text-xs';
 
       window.speechSynthesis.speak(utterance);
     };
 
-    /* ==========================================================================
-       TIMELINE MANAGER (ADD, DELETE, LAYOUT)
-       ========================================================================== */
+    // ADD TO TIMELINE
     document.getElementById('btn-add-to-track').onclick = () => {
       const text = ttsInput.value.trim();
       if (!text) return alert('Enter dialogue text to place on the timeline.');
 
       const voiceIdx = parseInt(voiceSelect.value, 10) || 0;
-      const voiceName = availableVoices[voiceIdx] ? availableVoices[voiceIdx].name.split(' ')[0] : 'Voice';
+      const selVoice = availableVoices[voiceIdx];
+      const voiceName = selVoice ? selVoice.name : 'Voice';
+      const voiceLang = selVoice ? selVoice.lang : 'en-AU';
 
       const words = text.split(/\s+/).filter(Boolean).length;
       const durationSec = Math.max(1.2, Math.round(((words / 2.5) + 0.4) * 10) / 10);
@@ -284,7 +245,8 @@
         start: startTime,
         duration: durationSec,
         voiceIndex: voiceIdx,
-        voiceName: voiceName
+        voiceName: voiceName,
+        voiceLang: voiceLang
       });
 
       renderTimeline();
@@ -294,20 +256,20 @@
       clipsLane.innerHTML = '';
 
       if (trackClips.length === 0) {
-        clipsLane.innerHTML = '<div class="text-xs text-slate-500 italic pl-3" id="timeline-empty-notice">No clips placed yet. Click "Place Clip on Voice Track" to build your timeline.</div>';
+        clipsLane.innerHTML = '<div class="text-xs text-slate-500 italic pl-3" id="timeline-empty-notice">No clips placed yet.</div>';
         btnPlayPause.disabled = true;
-        btnRecordToSlot.disabled = true;
+        btnExportSpeech.disabled = true;
         document.getElementById('clip-count-label').innerText = '0 clips';
         updatePlayheadUI(0);
         return;
       }
 
       btnPlayPause.disabled = false;
-      btnRecordToSlot.disabled = false;
+      btnExportSpeech.disabled = false;
       document.getElementById('clip-count-label').innerText = `${trackClips.length} clips`;
 
       const totalTrackDuration = trackClips[trackClips.length - 1].start + trackClips[trackClips.length - 1].duration;
-      clipsLane.style.width = Math.max(600, (totalTrackDuration + 2) * PIXELS_PER_SECOND) + 'px';
+      clipsLane.style.width = Math.max(550, (totalTrackDuration + 2) * PIXELS_PER_SECOND) + 'px';
 
       trackClips.forEach((clip, idx) => {
         const clipEl = document.createElement('div');
@@ -332,7 +294,7 @@
           </div>
           <div class="flex items-center justify-between text-[10px] text-cyan-200/90 font-mono">
             <span>${clip.duration.toFixed(1)}s</span>
-            <span>${clip.voiceName}</span>
+            <span>${clip.voiceName.split(' ')[0]}</span>
           </div>
         `;
 
@@ -354,14 +316,12 @@
       const idx = trackClips.findIndex(c => c.id === clipId);
       if (idx !== -1) {
         trackClips.splice(idx, 1);
-
         let currentPos = 0;
         trackClips.forEach(clip => {
           clip.start = currentPos;
           currentPos = Math.round((currentPos + clip.duration + 0.25) * 100) / 100;
         });
       }
-
       seekTo(0);
       renderTimeline();
     };
@@ -376,9 +336,7 @@
       }
     };
 
-    /* ==========================================================================
-       TIMELINE SEQUENTIAL PLAYBACK
-       ========================================================================== */
+    // TIMELINE SEQUENTIAL PLAYBACK
     function updatePlayheadUI(time) {
       timelinePlayheadTime = time;
       playhead.style.left = (timelinePlayheadTime * PIXELS_PER_SECOND) + 'px';
@@ -451,10 +409,7 @@
         }, 250);
       };
 
-      utterance.onerror = () => {
-        stopTimelinePlayback();
-      };
-
+      utterance.onerror = () => stopTimelinePlayback();
       window.speechSynthesis.speak(utterance);
     }
 
@@ -478,151 +433,35 @@
       seekTo(0);
     };
 
-    document.getElementById('btn-jump-start').onclick = () => {
-      seekTo(0);
-    };
+    document.getElementById('btn-jump-start').onclick = () => seekTo(0);
 
-    /* ==========================================================================
-       RECORD TIMELINE TO MASTER SLOT & EXPORT
-       ========================================================================== */
-    btnRecordToSlot.onclick = async () => {
+    // EXPORT TIMELINE AS .speech DATA FILE
+    btnExportSpeech.onclick = () => {
       if (!trackClips.length) return;
 
-      stopTimelinePlayback();
-      exportStatus.innerText = 'Requesting audio input to capture timeline...';
-
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-        });
-      } catch (err) {
-        alert('Microphone/audio capture permission is required to record the timeline to the master slot.');
-        exportStatus.innerText = 'Permission denied';
-        return;
-      }
-
-      const mediaRecorder = new MediaRecorder(stream);
-      const audioChunks = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunks.push(e.data);
+      const projectData = {
+        format: "speech-studio-sequence",
+        version: "1.0",
+        createdAt: new Date().toISOString(),
+        totalClips: trackClips.length,
+        totalDuration: trackClips[trackClips.length - 1].start + trackClips[trackClips.length - 1].duration,
+        clips: trackClips.map((c, idx) => ({
+          order: idx + 1,
+          id: c.id,
+          text: c.text,
+          voiceName: c.voiceName,
+          voiceLang: c.voiceLang,
+          start: c.start,
+          duration: c.duration,
+          rate: 1.0,
+          pitch: 1.0
+        }))
       };
 
-      mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        exportStatus.innerText = 'Processing slot buffer...';
+      const jsonStr = JSON.stringify(projectData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const filename = `sequence_${Date.now()}.speech`;
 
-        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-        const arrayBuf = await audioBlob.arrayBuffer();
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        savedSlotBuffer = await audioCtx.decodeAudioData(arrayBuf);
-
-        // Activate master slot UI
-        slotIndicator.className = 'w-3 h-3 rounded-full bg-emerald-400 animate-pulse';
-        slotBadge.className = 'text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded font-mono';
-        slotBadge.innerText = 'Loaded & Ready';
-        slotDetails.innerText = `Track committed: ${savedSlotBuffer.duration.toFixed(1)}s duration. Ready for download.`;
-
-        btnDownloadWav.disabled = false;
-        btnDownloadMp3.disabled = false;
-        exportStatus.innerText = 'Timeline captured to Master Slot!';
-      };
-
-      // Start recording and initiate sequential playback
-      mediaRecorder.start(100);
-      exportStatus.innerText = 'Recording timeline sequence in real time...';
-      
-      startTimelinePlayback();
-
-      // Monitor when playback finishes to stop recording
-      const checkFinished = setInterval(() => {
-        if (!isPlayingTimeline) {
-          clearInterval(checkFinished);
-          setTimeout(() => {
-            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-          }, 300);
-        }
-      }, 100);
-    };
-
-    /* ==========================================================================
-       FILE ENCODERS (WAV 16-BIT & MP3)
-       ========================================================================== */
-    function audioBufferToWavBlob(buffer) {
-      const numOfChan = buffer.numberOfChannels;
-      const length = buffer.length * numOfChan * 2 + 44;
-      const out = new DataView(new ArrayBuffer(length));
-      let pos = 0;
-
-      const setUint16 = (d) => { out.setUint16(pos, d, true); pos += 2; };
-      const setUint32 = (d) => { out.setUint32(pos, d, true); pos += 4; };
-
-      setUint32(0x46464952); // "RIFF"
-      setUint32(length - 8);
-      setUint32(0x45564157); // "WAVE"
-      setUint32(0x20746d66); // "fmt "
-      setUint32(16);          // 16-bit Subchunk
-      setUint16(1);           // Linear PCM
-      setUint16(numOfChan);
-      setUint32(buffer.sampleRate);
-      setUint32(buffer.sampleRate * 2 * numOfChan);
-      setUint16(numOfChan * 2);
-      setUint16(16);          // 16-bit
-      setUint32(0x61746164); // "data"
-      setUint32(length - pos - 4);
-
-      const channels = [];
-      for (let i = 0; i < numOfChan; i++) {
-        channels.push(buffer.getChannelData(i));
-      }
-
-      for (let i = 0; i < buffer.length; i++) {
-        for (let ch = 0; ch < numOfChan; ch++) {
-          let s = Math.max(-1, Math.min(1, channels[ch][i]));
-          s = s < 0 ? s * 0x8000 : s * 0x7FFF;
-          out.setInt16(pos, s, true);
-          pos += 2;
-        }
-      }
-
-      return new Blob([out.buffer], { type: 'audio/wav' });
-    }
-
-    function audioBufferToMp3Blob(buffer) {
-      const channels = buffer.numberOfChannels;
-      const sampleRate = buffer.sampleRate;
-      const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, 192);
-      const mp3Data = [];
-
-      const left = buffer.getChannelData(0);
-      const right = channels > 1 ? buffer.getChannelData(1) : left;
-      const sampleBlockSize = 1152;
-
-      const leftInt16 = new Int16Array(left.length);
-      const rightInt16 = new Int16Array(right.length);
-
-      for (let i = 0; i < left.length; i++) {
-        leftInt16[i] = Math.max(-32768, Math.min(32767, left[i] * 32767));
-        rightInt16[i] = Math.max(-32768, Math.min(32767, right[i] * 32767));
-      }
-
-      for (let i = 0; i < leftInt16.length; i += sampleBlockSize) {
-        const leftChunk = leftInt16.subarray(i, i + sampleBlockSize);
-        const rightChunk = rightInt16.subarray(i, i + sampleBlockSize);
-        const mp3buf = channels === 2 
-          ? mp3encoder.encodeBuffer(leftChunk, rightChunk) 
-          : mp3encoder.encodeBuffer(leftChunk);
-        if (mp3buf.length > 0) mp3Data.push(mp3buf);
-      }
-
-      const endBuf = mp3encoder.flush();
-      if (endBuf.length > 0) mp3Data.push(endBuf);
-
-      return new Blob(mp3Data, { type: 'audio/mp3' });
-    }
-
-    function triggerDownload(blob, filename) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -632,28 +471,13 @@
       setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-      }, 2000);
-    }
+      }, 1000);
 
-    btnDownloadWav.onclick = () => {
-      if (!savedSlotBuffer) return;
-      const blob = audioBufferToWavBlob(savedSlotBuffer);
-      triggerDownload(blob, `voice_master_${Date.now()}.wav`);
-      exportStatus.innerText = 'Downloaded Master WAV!';
+      exportStatus.innerText = `Saved ${filename}!`;
       setTimeout(() => { exportStatus.innerText = ''; }, 3000);
     };
 
-    btnDownloadMp3.onclick = () => {
-      if (!savedSlotBuffer) return;
-      const blob = audioBufferToMp3Blob(savedSlotBuffer);
-      triggerDownload(blob, `voice_master_${Date.now()}.mp3`);
-      exportStatus.innerText = 'Downloaded Master MP3!';
-      setTimeout(() => { exportStatus.innerText = ''; }, 3000);
-    };
-
-    /* ==========================================================================
-       ISOLATED SPEECH DICTATION
-       ========================================================================== */
+    // SPEECH-TO-TEXT DICTATION
     const btnStt = document.getElementById('btn-stt');
     const sttLabel = document.getElementById('stt-label');
     const sttStatusText = document.getElementById('stt-status-text');
@@ -681,7 +505,7 @@
           recognition.stop();
           isDictating = false;
           sttLabel.innerText = 'Dictate Text';
-          sttStatusText.innerText = 'Dictate with your mic to convert spoken words into dialogue below.';
+          sttStatusText.innerText = 'Dictate into your mic to append speech dialogue below.';
           btnStt.className = 'px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 rounded-lg text-xs font-bold border border-[#30363d] flex items-center gap-1.5 transition';
           sttMicIcon.className = 'fa-solid fa-microphone';
         }
