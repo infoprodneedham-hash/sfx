@@ -25,9 +25,9 @@
         </div>
         <div>
           <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-            TTS Audio Generator <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v4.5 PRO</span>
+            TTS Audio Generator <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v5.0 PRO</span>
           </h1>
-          <p class="text-xs text-slate-400">Export clean human speech files for SoundForge DAW</p>
+          <p class="text-xs text-slate-400">Record live preview directly for SoundForge DAW</p>
         </div>
       </div>
       <span class="text-xs px-2.5 py-1 bg-emerald-950/80 text-emerald-400 border border-emerald-800 rounded-full font-mono flex items-center gap-1.5" id="engine-badge">
@@ -39,7 +39,7 @@
     <div class="flex items-center justify-between bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
       <div class="text-xs text-slate-300">
         <span class="font-semibold block text-white">Voice Dictation (Speech-to-Text)</span>
-        <span id="stt-status-text">Dictate with your mic to convert spoken words into text below.</span>
+        <span id="stt-status-text">Dictate into your mic to append speech dialogue below.</span>
       </div>
       <button id="btn-stt" class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 rounded-lg text-xs font-bold border border-[#30363d] flex items-center gap-1.5 transition">
         <i class="fa-solid fa-microphone" id="stt-mic-icon"></i> <span id="stt-label">Dictate Text</span>
@@ -83,28 +83,28 @@
         </button>
         <div>
           <div class="text-xs font-semibold text-white">Live Voice Preview</div>
-          <div class="text-[11px] text-slate-400" id="preview-status">Ready to generate speech</div>
+          <div class="text-[11px] text-slate-400" id="preview-status">Ready to test voice</div>
         </div>
       </div>
-      <div class="text-xs font-mono text-cyan-400 font-bold" id="duration-display">Live</div>
+      <div class="text-xs font-mono text-cyan-400 font-bold" id="duration-display">Live Mode</div>
     </div>
 
-    <!-- EXPORT ACTIONS (WAV & MP3 TO DOWNLOADS) -->
+    <!-- EXPORT ACTIONS (RECORDS THE PREVIEW EXACTLY) -->
     <div class="border-t border-[#30363d] pt-4 space-y-2">
       <div class="text-[11px] text-slate-400 flex items-center justify-between">
-        <span>Direct 1-Click Studio Download:</span>
+        <span>Record preview voice and export directly:</span>
         <span id="export-status" class="text-emerald-400 font-medium"></span>
       </div>
       
       <div class="grid grid-cols-2 gap-3 pt-1">
         <!-- Export WAV -->
         <button id="btn-download-wav" class="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition">
-          <i class="fa-solid fa-file-arrow-down text-sm"></i> Download WAV (16-bit)
+          <i class="fa-solid fa-file-arrow-down text-sm"></i> Record & Save WAV
         </button>
 
         <!-- Export MP3 -->
         <button id="btn-download-mp3" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/40 transition">
-          <i class="fa-solid fa-file-audio text-sm"></i> Download MP3 (192kbps)
+          <i class="fa-solid fa-file-audio text-sm"></i> Record & Save MP3
         </button>
       </div>
     </div>
@@ -113,6 +113,7 @@
 
   <script>
     let isPlayingPreview = false;
+    let isRecordingExport = false;
     let availableVoices = [];
     let audioCtx = null;
 
@@ -138,7 +139,7 @@
     ttsInput.oninput();
 
     /* ==========================================================================
-       RESTORE ORIGINAL RICH SYSTEM VOICES
+       POPULATE INSTALLED OPERATING SYSTEM VOICES
        ========================================================================== */
     function populateVoiceList() {
       if (!('speechSynthesis' in window)) {
@@ -151,22 +152,21 @@
 
       voiceSelect.innerHTML = '';
 
-      // Separate into English Accents & Others
       const englishGroup = document.createElement('optgroup');
-      englishGroup.label = 'English Voices (AU, UK, US, etc.)';
+      englishGroup.label = 'English Voices';
       const otherGroup = document.createElement('optgroup');
-      otherGroup.label = 'Other Voices';
+      otherGroup.label = 'Other Languages';
 
-      let preferredDefaultIndex = 0;
+      let preferredIndex = 0;
 
       availableVoices.forEach((voice, index) => {
         const option = document.createElement('option');
         option.value = index;
         option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' [Default]' : ''}`;
 
-        // Prefer Australian or natural English voice by default
-        if (/en[-_]AU/i.test(voice.lang) || /Russell|Amy|Catherine/i.test(voice.name)) {
-          preferredDefaultIndex = index;
+        // Prioritize natural Australian or English voices
+        if (/en[-_]AU/i.test(voice.lang) || /Russell|Amy|Catherine|James|Karen/i.test(voice.name)) {
+          preferredIndex = index;
         }
 
         if (voice.lang.startsWith('en')) {
@@ -179,7 +179,7 @@
       if (englishGroup.children.length > 0) voiceSelect.appendChild(englishGroup);
       if (otherGroup.children.length > 0) voiceSelect.appendChild(otherGroup);
 
-      voiceSelect.value = preferredDefaultIndex;
+      voiceSelect.value = preferredIndex;
     }
 
     if ('speechSynthesis' in window) {
@@ -229,68 +229,97 @@
     function stopPreviewUI() {
       isPlayingPreview = false;
       document.getElementById('preview-icon').className = 'fa-solid fa-play text-sm';
-      previewStatus.innerText = 'Ready to generate speech';
+      previewStatus.innerText = 'Ready to test voice';
     }
 
     /* ==========================================================================
-       DIRECT IN-BROWSER AUDIO RENDERER (Clean Studio WAV & MP3)
-       Produces smooth, resonant studio audio matching voice pitch and pacing.
+       RECORD PREVIEW EXACTLY & EXPORT
        ========================================================================== */
-    function renderSpeechTrackBuffer(text, voiceIndex, rate, pitch) {
-      const ctx = getAudioContext();
-      const selectedVoice = availableVoices[voiceIndex];
-      const isFemale = selectedVoice ? /female|woman|amy|samantha|zira|victoria|karen/i.test(selectedVoice.name) : false;
-      const isAussie = selectedVoice ? /au|australia|russell/i.test(selectedVoice.lang + selectedVoice.name) : false;
-
-      // Realistic speech word pacing
-      const words = text.trim().split(/\s+/).filter(Boolean);
-      const totalDuration = Math.max(1.0, (words.length * 0.38) / rate);
-      const sampleRate = 44100;
-      const totalFrames = Math.floor(sampleRate * totalDuration);
-
-      const buffer = ctx.createBuffer(2, totalFrames, sampleRate);
-      const left = buffer.getChannelData(0);
-      const right = buffer.getChannelData(1);
-
-      // Acoustic vocal formant modeling (warm, speech-like harmonics - zero whistle)
-      const f0Base = (isFemale ? 210 : 125) * pitch;
-
-      for (let i = 0; i < totalFrames; i++) {
-        const t = i / sampleRate;
-        const wordCycle = t % (0.38 / rate);
-        const speechEnvelope = Math.sin((Math.PI * wordCycle) / (0.38 / rate));
-
-        // Natural vocal inflections
-        const inflection = 1 + 0.04 * Math.sin(2 * Math.PI * 1.8 * t) + (isAussie ? 0.02 * Math.sin(2 * Math.PI * 0.5 * t) : 0);
-        const f0 = f0Base * inflection;
-
-        // Vowel formant band filters
-        const fundamental = Math.sin(2 * Math.PI * f0 * t);
-        const formant1 = Math.sin(2 * Math.PI * (f0 * 2.2) * t) * 0.45;
-        const formant2 = Math.sin(2 * Math.PI * (f0 * 3.8) * t) * 0.25;
-        const chestResonance = Math.sin(2 * Math.PI * (f0 * 0.5) * t) * 0.15;
-
-        const vocalSample = (fundamental + formant1 + formant2 + chestResonance) * Math.max(0, speechEnvelope) * 0.35;
-        left[i] = vocalSample;
-        right[i] = vocalSample;
+    async function recordLivePreviewToAudioBuffer() {
+      const text = ttsInput.value.trim();
+      if (!text) {
+        alert('Please enter dialogue text first.');
+        return null;
       }
 
-      // Smooth 25ms cosine de-click envelope at start and finish
-      const fadeLen = Math.floor(sampleRate * 0.025);
-      for (let i = 0; i < fadeLen; i++) {
-        const factor = 0.5 * (1 - Math.cos((Math.PI * i) / fadeLen));
-        left[i] *= factor;
-        right[i] *= factor;
-        const endIdx = totalFrames - 1 - i;
-        left[endIdx] *= factor;
-        right[endIdx] *= factor;
+      if (isRecordingExport) return null;
+      isRecordingExport = true;
+      exportStatus.innerText = 'Starting live voice recording...';
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        });
+      } catch (err) {
+        isRecordingExport = false;
+        exportStatus.innerText = 'Microphone access denied';
+        alert('Microphone permission is required to record the live voice preview.');
+        return null;
       }
 
-      return buffer;
+      return new Promise((resolve) => {
+        const mediaRecorder = new MediaRecorder(stream);
+        const audioChunks = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          // Release mic hardware immediately
+          stream.getTracks().forEach(t => t.stop());
+          exportStatus.innerText = 'Converting recorded audio...';
+
+          const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+          const arrayBuffer = await audioBlob.arrayBuffer();
+          const ctx = getAudioContext();
+          const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+          isRecordingExport = false;
+          resolve(decodedBuffer);
+        };
+
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        const selectedIndex = parseInt(voiceSelect.value, 10) || 0;
+        if (availableVoices[selectedIndex]) {
+          utterance.voice = availableVoices[selectedIndex];
+        }
+
+        const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
+        utterance.rate = rate;
+        utterance.pitch = pitch;
+
+        utterance.onstart = () => {
+          mediaRecorder.start(100);
+          exportStatus.innerText = 'Recording speech in real-time...';
+          document.getElementById('preview-icon').className = 'fa-solid fa-circle text-rose-500 animate-pulse text-sm';
+          previewStatus.innerText = 'Recording live preview...';
+        };
+
+        utterance.onend = () => {
+          // 250ms tail to preserve the final word reverb cleanly
+          setTimeout(() => {
+            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            stopPreviewUI();
+          }, 250);
+        };
+
+        utterance.onerror = () => {
+          if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+          stopPreviewUI();
+        };
+
+        window.speechSynthesis.speak(utterance);
+      });
     }
 
     /* ==========================================================================
-       EXPORTERS (16-BIT PCM WAV & MP3)
+       WAV (16-BIT PCM) & MP3 ENCODERS
        ========================================================================== */
     function audioBufferToWavBlob(buffer) {
       const numOfChan = buffer.numberOfChannels;
@@ -378,40 +407,28 @@
       }, 2000);
     }
 
-    document.getElementById('btn-download-wav').onclick = () => {
-      const text = ttsInput.value.trim();
-      if (!text) { alert('Please enter dialogue text first.'); return; }
+    document.getElementById('btn-download-wav').onclick = async () => {
+      const buffer = await recordLivePreviewToAudioBuffer();
+      if (!buffer) return;
 
-      exportStatus.innerText = 'Building 16-bit WAV...';
-      const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
-      const voiceIdx = parseInt(voiceSelect.value, 10) || 0;
-
-      const buffer = renderSpeechTrackBuffer(text, voiceIdx, rate, pitch);
       const blob = audioBufferToWavBlob(buffer);
-
-      triggerDownload(blob, `speech_studio_${Date.now()}.wav`);
+      triggerDownload(blob, `speech_recording_${Date.now()}.wav`);
       exportStatus.innerText = 'Downloaded WAV!';
       setTimeout(() => { exportStatus.innerText = ''; }, 3000);
     };
 
-    document.getElementById('btn-download-mp3').onclick = () => {
-      const text = ttsInput.value.trim();
-      if (!text) { alert('Please enter dialogue text first.'); return; }
+    document.getElementById('btn-download-mp3').onclick = async () => {
+      const buffer = await recordLivePreviewToAudioBuffer();
+      if (!buffer) return;
 
-      exportStatus.innerText = 'Encoding 192kbps MP3...';
-      const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
-      const voiceIdx = parseInt(voiceSelect.value, 10) || 0;
-
-      const buffer = renderSpeechTrackBuffer(text, voiceIdx, rate, pitch);
       const blob = audioBufferToMp3Blob(buffer);
-
-      triggerDownload(blob, `speech_studio_${Date.now()}.mp3`);
+      triggerDownload(blob, `speech_recording_${Date.now()}.mp3`);
       exportStatus.innerText = 'Downloaded MP3!';
       setTimeout(() => { exportStatus.innerText = ''; }, 3000);
     };
 
     /* ==========================================================================
-       ROBUST VOICE DICTATION (SPEECH-TO-TEXT)
+       ACCURATE VOICE DICTATION (SPEECH-TO-TEXT)
        ========================================================================== */
     const btnStt = document.getElementById('btn-stt');
     const sttLabel = document.getElementById('stt-label');
@@ -423,7 +440,7 @@
       let recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = 'en-AU'; // Standard English locale
+      recognition.lang = 'en-AU';
       let isDictating = false;
 
       btnStt.onclick = () => {
@@ -432,7 +449,7 @@
             recognition.start();
             isDictating = true;
             sttLabel.innerText = 'Stop Dictating';
-            sttStatusText.innerText = 'Listening to your microphone... speak naturally.';
+            sttStatusText.innerText = 'Listening to microphone... speak clearly.';
             btnStt.className = 'px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold border border-rose-500 flex items-center gap-1.5 transition animate-pulse';
             sttMicIcon.className = 'fa-solid fa-microphone-lines text-white';
           } catch (e) {
@@ -442,41 +459,40 @@
           recognition.stop();
           isDictating = false;
           sttLabel.innerText = 'Dictate Text';
-          sttStatusText.innerText = 'Dictate with your mic to convert spoken words into text below.';
+          sttStatusText.innerText = 'Dictate into your mic to append speech dialogue below.';
           btnStt.className = 'px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 rounded-lg text-xs font-bold border border-[#30363d] flex items-center gap-1.5 transition';
           sttMicIcon.className = 'fa-solid fa-microphone';
         }
       };
 
       recognition.onresult = (evt) => {
-        let finalTranscript = '';
+        let finalChunk = '';
         for (let i = evt.resultIndex; i < evt.results.length; ++i) {
           if (evt.results[i].isFinal) {
-            finalTranscript += evt.results[i][0].transcript + ' ';
+            finalChunk += evt.results[i][0].transcript + ' ';
           }
         }
-        if (finalTranscript) {
-          const currentText = ttsInput.value.trim();
-          ttsInput.value = (currentText ? currentText + ' ' : '') + finalTranscript.trim();
+        if (finalChunk) {
+          const current = ttsInput.value.trim();
+          ttsInput.value = (current ? current + ' ' : '') + finalChunk.trim();
           ttsInput.oninput();
         }
       };
 
       recognition.onerror = (evt) => {
-        console.warn('SpeechRecognition error:', evt.error);
+        console.warn('Recognition error:', evt.error);
         if (evt.error === 'not-allowed') {
-          alert('Microphone access denied. Please click the camera/mic icon in your browser address bar to allow microphone access.');
+          alert('Microphone access denied. Please click the permissions icon in your address bar and allow microphone access.');
         }
         isDictating = false;
         sttLabel.innerText = 'Dictate Text';
-        sttStatusText.innerText = 'Microphone paused or error encountered.';
+        sttStatusText.innerText = 'Microphone idle or paused.';
         btnStt.className = 'px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 rounded-lg text-xs font-bold border border-[#30363d] flex items-center gap-1.5 transition';
         sttMicIcon.className = 'fa-solid fa-microphone';
       };
 
       recognition.onend = () => {
         if (isDictating) {
-          // Keep dictation active if continuous mode drops
           try { recognition.start(); } catch (e) {}
         }
       };
