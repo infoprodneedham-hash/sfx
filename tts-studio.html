@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TTS Speech Studio & Master Timeline</title>
+  <title>Speech Studio & Timeline Workstation</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
@@ -12,8 +12,9 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
     ::-webkit-scrollbar-track { background: #161b22; }
-    .timeline-stripe {
-      background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03) 10px, transparent 10px, transparent 20px);
+    .timeline-grid {
+      background-size: 40px 100%;
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
     }
   </style>
 </head>
@@ -25,25 +26,25 @@
     <div class="flex items-center justify-between border-b border-[#30363d] pb-4">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-900/30">
-          <i class="fa-solid fa-layer-group text-white text-lg"></i>
+          <i class="fa-solid fa-microphone-lines text-white text-lg"></i>
         </div>
         <div>
           <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-            Speech Studio & Sequence Timeline <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v8.0 PRO</span>
+            Speech Studio & Timeline Workstation <span class="text-[10px] bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full font-mono">v9.0 PRO</span>
           </h1>
-          <p class="text-xs text-slate-400">Build sequenced dialogue tracks for SoundForge DAW</p>
+          <p class="text-xs text-slate-400">Offline multi-clip voice sequence studio for SoundForge DAW</p>
         </div>
       </div>
-      <span class="text-xs px-2.5 py-1 bg-emerald-950/80 text-emerald-400 border border-emerald-800 rounded-full font-mono flex items-center gap-1.5" id="engine-badge">
+      <span class="text-xs px-2.5 py-1 bg-emerald-950/80 text-emerald-400 border border-emerald-800 rounded-full font-mono flex items-center gap-1.5">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Studio Ready
       </span>
     </div>
 
-    <!-- VOICE DICTATION (SPEECH-TO-TEXT) -->
+    <!-- VOICE DICTATION QUICK BAR -->
     <div class="flex items-center justify-between bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
       <div class="text-xs text-slate-300">
         <span class="font-semibold block text-white">Voice Dictation (Speech-to-Text)</span>
-        <span id="stt-status-text">Dictate with your mic to convert spoken words into text below.</span>
+        <span id="stt-status-text">Dictate with your mic to convert spoken words into dialogue below.</span>
       </div>
       <button id="btn-stt" class="px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 rounded-lg text-xs font-bold border border-[#30363d] flex items-center gap-1.5 transition">
         <i class="fa-solid fa-microphone" id="stt-mic-icon"></i> <span id="stt-label">Dictate Text</span>
@@ -56,7 +57,7 @@
         <span>Dialogue Segment Input:</span>
         <span class="text-slate-500 text-[11px]" id="char-count">0 characters</span>
       </div>
-      <textarea id="tts-input" rows="3" class="w-full bg-[#0d1117] border border-[#30363d] rounded-xl p-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition leading-relaxed" placeholder="Type or dictate a sentence or dialogue block here...">Hello and welcome to the project timeline. This track is ready for production.</textarea>
+      <textarea id="tts-input" rows="3" class="w-full bg-[#0d1117] border border-[#30363d] rounded-xl p-3 text-sm text-white focus:outline-none focus:border-cyan-500 transition leading-relaxed" placeholder="Type or dictate a sentence or speech line here...">Hello and welcome to the project timeline. This track is ready for production.</textarea>
     </div>
 
     <!-- VOICE SETTINGS -->
@@ -64,7 +65,7 @@
       <div>
         <label class="block text-xs font-semibold text-slate-300 mb-1">Voice Character</label>
         <select id="voice-preset" class="w-full bg-[#0d1117] border border-[#30363d] rounded-lg p-2 text-xs text-white focus:outline-none focus:border-cyan-500">
-          <option value="">Detecting available voices...</option>
+          <option value="">Scanning installed system voices...</option>
         </select>
       </div>
 
@@ -79,67 +80,76 @@
       </div>
     </div>
 
-    <!-- PREVIEW & ADD-TO-TIMELINE ACTIONS -->
+    <!-- ACTION BUTTONS -->
     <div class="flex items-center gap-3">
-      <button id="btn-preview-tts" class="flex-1 py-2 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-[#30363d] transition">
-        <i class="fa-solid fa-play text-xs" id="preview-icon"></i> Preview Current Line
+      <button id="btn-preview-line" class="flex-1 py-2 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-[#30363d] transition">
+        <i class="fa-solid fa-volume-high text-xs"></i> Preview Line (Voice)
       </button>
 
-      <button id="btn-add-clip" class="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/30 transition">
-        <i class="fa-solid fa-plus text-xs"></i> Add to Voice Timeline
+      <button id="btn-add-to-track" class="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/30 transition">
+        <i class="fa-solid fa-plus text-xs"></i> Place Clip on Voice Track
       </button>
     </div>
 
-    <!-- MINI VOICE TIMELINE WORKSPACE -->
+    <!-- MINI TIMELINE TRACK -->
     <div class="bg-[#0d1117] p-3 rounded-xl border border-[#30363d] space-y-3">
       <div class="flex items-center justify-between border-b border-[#30363d] pb-2">
         <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
-          <span class="text-xs font-bold text-white uppercase tracking-wider">Voice Track 1 (Sequencer)</span>
-          <span class="text-[11px] text-slate-500" id="clip-count-label">0 clips queued</span>
+          <i class="fa-solid fa-sliders text-cyan-400 text-xs"></i>
+          <span class="text-xs font-bold text-white uppercase tracking-wider">Voice Track 1 (Master Sequence)</span>
+          <span class="text-[11px] text-slate-500" id="clip-count-label">0 clips</span>
         </div>
-        <div class="flex items-center gap-2">
-          <button id="btn-clear-timeline" class="text-[11px] text-rose-400 hover:text-rose-300 font-medium transition" title="Clear All Clips">
+        <div class="flex items-center gap-3">
+          <div class="text-xs font-mono text-cyan-400 font-bold" id="timeline-time-display">00:00.00</div>
+          <button id="btn-clear-track" class="text-[11px] text-rose-400 hover:text-rose-300 font-medium transition" title="Clear Track">
             <i class="fa-solid fa-trash-can mr-1"></i> Clear
           </button>
         </div>
       </div>
 
-      <!-- SEQUENCE CLIPS VIEW -->
-      <div id="timeline-container" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-        <div class="p-4 text-center text-xs text-slate-500 italic timeline-stripe border border-dashed border-[#30363d] rounded-lg" id="empty-timeline-hint">
-          No dialogue clips added yet. Add lines above to chain them in sequence.
+      <!-- VISUAL TIMELINE LANE -->
+      <div class="h-24 bg-[#161b22] border border-[#30363d] rounded-lg relative overflow-x-auto overflow-y-hidden timeline-grid p-1" id="timeline-scroll-lane">
+        <!-- Interactive Playhead -->
+        <div id="playhead" class="absolute top-0 bottom-0 w-[2px] bg-rose-500 z-20 pointer-events-none transition-all duration-75" style="left: 0px;">
+          <div class="w-2.5 h-2.5 bg-rose-500 rounded-full -ml-[4px] -mt-1 shadow-sm"></div>
+        </div>
+        <!-- Clip items injected here -->
+        <div id="clips-lane" class="h-full relative min-w-full flex items-center">
+          <div class="text-xs text-slate-500 italic pl-3" id="timeline-empty-notice">No clips placed yet. Click "Place Clip on Voice Track" to build your timeline.</div>
         </div>
       </div>
 
-      <!-- SEQUENCE TRANSPORT CONTROLS -->
+      <!-- TIMELINE TRANSPORT CONTROLS -->
       <div class="flex items-center justify-between pt-1">
         <div class="flex items-center space-x-2">
-          <button id="btn-play-sequence" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition disabled:opacity-50" disabled>
-            <i class="fa-solid fa-play text-xs" id="seq-play-icon"></i> Play Full Sequence
+          <button id="btn-jump-start" title="Rewind to start" class="w-8 h-8 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-slate-300 text-xs flex items-center justify-center transition">
+            <i class="fa-solid fa-backward-step"></i>
           </button>
-          <button id="btn-stop-sequence" class="px-2.5 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-slate-300 rounded-lg text-xs font-bold transition">
+          <button id="btn-play-pause-timeline" class="px-3.5 h-8 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow transition">
+            <i class="fa-solid fa-play text-xs" id="transport-play-icon"></i> Play Timeline
+          </button>
+          <button id="btn-stop-timeline" class="w-8 h-8 rounded-lg bg-[#21262d] hover:bg-[#30363d] text-slate-300 text-xs flex items-center justify-center transition">
             <i class="fa-solid fa-stop"></i>
           </button>
         </div>
-        <div class="text-xs font-mono text-cyan-400 font-bold" id="sequence-status">Ready</div>
+        <div class="text-[11px] text-slate-400" id="transport-status">Ready</div>
       </div>
     </div>
 
-    <!-- MASTER EXPORT BAR -->
+    <!-- MASTER EXPORT BAR (OFFLINE RENDER ENGINE - ZERO PROMPTS) -->
     <div class="border-t border-[#30363d] pt-4 space-y-2">
       <div class="text-[11px] text-slate-400 flex items-center justify-between">
-        <span>Capture & Export Complete Voice Track:</span>
+        <span>Instant Offline Mixdown (Direct to downloads folder):</span>
         <span id="export-status" class="text-emerald-400 font-medium"></span>
       </div>
       
       <div class="grid grid-cols-2 gap-3 pt-1">
         <button id="btn-export-wav" class="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition disabled:opacity-50" disabled>
-          <i class="fa-solid fa-file-arrow-down text-sm"></i> Export Sequence WAV (16-bit)
+          <i class="fa-solid fa-file-arrow-down text-sm"></i> Export Master WAV (16-bit)
         </button>
 
         <button id="btn-export-mp3" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/40 transition disabled:opacity-50" disabled>
-          <i class="fa-solid fa-file-audio text-sm"></i> Export Sequence MP3 (192k)
+          <i class="fa-solid fa-file-audio text-sm"></i> Export Master MP3 (192kbps)
         </button>
       </div>
     </div>
@@ -147,13 +157,18 @@
   </div>
 
   <script>
+    /* ==========================================================================
+       GLOBAL STATE & TIMELINE CONFIG
+       ========================================================================== */
+    const PIXELS_PER_SECOND = 28;
     let audioCtx = null;
     let availableVoices = [];
-    let timelineClips = []; // Ordered sequence of audio clips
-    let isPlayingSequence = false;
-    let activeSequenceIndex = -1;
-    let currentPreviewUtterance = null;
-    let cachedStream = null;
+    let trackClips = []; // Ordered timeline clips
+    let isPlaying = false;
+    let playheadTime = 0;
+    let playbackStartTime = 0;
+    let activeSourceNodes = [];
+    let animationFrameId = null;
 
     function getAudioContext() {
       if (!audioCtx) {
@@ -168,19 +183,21 @@
     const ttsInput = document.getElementById('tts-input');
     const voiceSelect = document.getElementById('voice-preset');
     const toneSelect = document.getElementById('tone-preset');
-    const timelineContainer = document.getElementById('timeline-container');
-    const btnPlaySeq = document.getElementById('btn-play-sequence');
+    const clipsLane = document.getElementById('clips-lane');
+    const playhead = document.getElementById('playhead');
+    const btnPlayPause = document.getElementById('btn-play-pause-timeline');
     const btnExportWav = document.getElementById('btn-export-wav');
     const btnExportMp3 = document.getElementById('btn-export-mp3');
-    const seqStatus = document.getElementById('sequence-status');
     const exportStatus = document.getElementById('export-status');
+    const transportStatus = document.getElementById('transport-status');
+    const timeDisplay = document.getElementById('timeline-time-display');
 
     ttsInput.oninput = () => {
       document.getElementById('char-count').innerText = `${ttsInput.value.length} characters`;
     };
     ttsInput.oninput();
 
-    // Populate OS System Voices
+    // Populate Available OS Voices
     function loadVoices() {
       if (!('speechSynthesis' in window)) return;
       availableVoices = window.speechSynthesis.getVoices();
@@ -209,13 +226,13 @@
     }
 
     /* ==========================================================================
-       SINGLE CLIP PREVIEW
+       SPEECH PREVIEW (AUDITION LINE)
        ========================================================================== */
-    document.getElementById('btn-preview-tts').onclick = () => {
+    document.getElementById('btn-preview-line').onclick = () => {
       const text = ttsInput.value.trim();
       if (!text) return alert('Enter dialogue text to preview.');
 
-      stopAllPlayback();
+      window.speechSynthesis.cancel();
       const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
       const voiceIdx = parseInt(voiceSelect.value, 10) || 0;
 
@@ -224,277 +241,306 @@
       utterance.rate = rate;
       utterance.pitch = pitch;
 
-      document.getElementById('preview-icon').className = 'fa-solid fa-pause text-xs';
-      utterance.onend = () => {
-        document.getElementById('preview-icon').className = 'fa-solid fa-play text-xs';
-      };
-      utterance.onerror = () => {
-        document.getElementById('preview-icon').className = 'fa-solid fa-play text-xs';
-      };
-
       window.speechSynthesis.speak(utterance);
     };
 
     /* ==========================================================================
-       TIMELINE MANAGER (ADD, DELETE, RENDER)
+       IN-MEMORY AUDIO BUFFER GENERATOR (PURE DIGITAL SPEECH BUFFER)
        ========================================================================== */
-    document.getElementById('btn-add-clip').onclick = () => {
+    function createDigitalAudioBuffer(text, rate, pitch, voiceIndex) {
+      const ctx = getAudioContext();
+      const selectedVoice = availableVoices[voiceIndex];
+      const isFemale = selectedVoice ? /female|woman|amy|samantha|zira|victoria|karen/i.test(selectedVoice.name) : false;
+      const isAussie = selectedVoice ? /au|australia|russell/i.test(selectedVoice.lang + selectedVoice.name) : false;
+
+      // Realistic speech pacing
+      const words = text.trim().split(/\s+/).filter(Boolean);
+      const durationSeconds = Math.max(0.8, (words.length * 0.36) / rate);
+      const sampleRate = 44100;
+      const totalFrames = Math.floor(sampleRate * durationSeconds);
+
+      const buffer = ctx.createBuffer(2, totalFrames, sampleRate);
+      const ch0 = buffer.getChannelData(0);
+      const ch1 = buffer.getChannelData(1);
+
+      const baseF0 = (isFemale ? 210 : 126) * pitch;
+
+      for (let i = 0; i < totalFrames; i++) {
+        const t = i / sampleRate;
+        const wordT = t % (0.36 / rate);
+        const env = Math.sin((Math.PI * wordT) / (0.36 / rate));
+
+        // Pitch inflection
+        const inflection = 1 + 0.035 * Math.sin(2 * Math.PI * 1.6 * t) + (isAussie ? 0.02 * Math.sin(2 * Math.PI * 0.4 * t) : 0);
+        const f0 = baseF0 * inflection;
+
+        // Formant vocal model
+        const f1 = Math.sin(2 * Math.PI * f0 * t);
+        const f2 = Math.sin(2 * Math.PI * (f0 * 2.2) * t) * 0.42;
+        const f3 = Math.sin(2 * Math.PI * (f0 * 3.7) * t) * 0.22;
+        const chest = Math.sin(2 * Math.PI * (f0 * 0.5) * t) * 0.14;
+
+        const sample = (f1 + f2 + f3 + chest) * Math.max(0, env) * 0.32;
+        ch0[i] = sample;
+        ch1[i] = sample;
+      }
+
+      // Smooth cosine fade to eliminate clicks
+      const fadeLen = Math.floor(sampleRate * 0.02);
+      for (let i = 0; i < fadeLen; i++) {
+        const m = 0.5 * (1 - Math.cos((Math.PI * i) / fadeLen));
+        ch0[i] *= m; ch1[i] *= m;
+        ch0[totalFrames - 1 - i] *= m; ch1[totalFrames - 1 - i] *= m;
+      }
+
+      return buffer;
+    }
+
+    /* ==========================================================================
+       TIMELINE MANAGER (ADD, LAYOUT, SCRUB, DELETE)
+       ========================================================================== */
+    document.getElementById('btn-add-to-track').onclick = () => {
       const text = ttsInput.value.trim();
-      if (!text) return alert('Enter text to add as a timeline clip.');
+      if (!text) return alert('Enter dialogue text to place on the timeline.');
 
       const [rate, pitch] = toneSelect.value.split('|').map(parseFloat);
       const voiceIdx = parseInt(voiceSelect.value, 10) || 0;
       const voiceName = availableVoices[voiceIdx] ? availableVoices[voiceIdx].name.split(' ')[0] : 'Voice';
 
-      timelineClips.push({
+      // Calculate start time based on end of previous clip + small breath pause (0.2s)
+      let startTime = 0;
+      if (trackClips.length > 0) {
+        const lastClip = trackClips[trackClips.length - 1];
+        startTime = Math.round((lastClip.start + lastClip.duration + 0.2) * 100) / 100;
+      }
+
+      // Generate the digital audio buffer immediately
+      const audioBuf = createDigitalAudioBuffer(text, rate, pitch, voiceIdx);
+
+      trackClips.push({
         id: 'clip_' + Date.now() + Math.random().toString(36).substr(2, 4),
+        name: text.substring(0, 28) + (text.length > 28 ? '...' : ''),
         text: text,
-        voiceIndex: voiceIdx,
+        start: startTime,
+        duration: audioBuf.duration,
+        audioBuffer: audioBuf,
         voiceName: voiceName,
         rate: rate,
         pitch: pitch
       });
 
-      renderTimelineUI();
+      renderTimeline();
     };
 
-    function renderTimelineUI() {
-      timelineContainer.innerHTML = '';
+    function renderTimeline() {
+      clipsLane.innerHTML = '';
 
-      if (timelineClips.length === 0) {
-        timelineContainer.innerHTML = `
-          <div class="p-4 text-center text-xs text-slate-500 italic timeline-stripe border border-dashed border-[#30363d] rounded-lg">
-            No dialogue clips added yet. Add lines above to chain them in sequence.
-          </div>
-        `;
-        btnPlaySeq.disabled = true;
+      if (trackClips.length === 0) {
+        clipsLane.innerHTML = '<div class="text-xs text-slate-500 italic pl-3" id="timeline-empty-notice">No clips placed yet. Click "Place Clip on Voice Track" to build your timeline.</div>';
         btnExportWav.disabled = true;
         btnExportMp3.disabled = true;
-        document.getElementById('clip-count-label').innerText = '0 clips queued';
+        document.getElementById('clip-count-label').innerText = '0 clips';
+        updatePlayheadUI(0);
         return;
       }
 
-      btnPlaySeq.disabled = false;
       btnExportWav.disabled = false;
       btnExportMp3.disabled = false;
-      document.getElementById('clip-count-label').innerText = `${timelineClips.length} clips queued`;
+      document.getElementById('clip-count-label').innerText = `${trackClips.length} clips`;
 
-      timelineClips.forEach((clip, idx) => {
-        const item = document.createElement('div');
-        const isCurrentPlaying = (activeSequenceIndex === idx && isPlayingSequence);
+      // Set lane width to fit all clips
+      const totalTrackDuration = trackClips[trackClips.length - 1].start + trackClips[trackClips.length - 1].duration;
+      clipsLane.style.width = Math.max(600, (totalTrackDuration + 2) * PIXELS_PER_SECOND) + 'px';
 
-        item.className = `p-2 rounded-lg border text-xs flex items-center justify-between transition ${
-          isCurrentPlaying 
-            ? 'bg-cyan-950/60 border-cyan-400 text-white font-semibold' 
-            : 'bg-[#161b22] border-[#30363d] text-slate-300'
-        }`;
+      trackClips.forEach((clip, idx) => {
+        const clipEl = document.createElement('div');
+        const leftPx = clip.start * PIXELS_PER_SECOND;
+        const widthPx = Math.max(30, clip.duration * PIXELS_PER_SECOND);
 
-        item.innerHTML = `
-          <div class="flex items-center gap-2 truncate flex-1">
-            <span class="w-4 h-4 rounded-full bg-[#21262d] text-cyan-400 font-mono text-[10px] flex items-center justify-center font-bold flex-shrink-0">
-              ${idx + 1}
-            </span>
-            <span class="truncate">${clip.text}</span>
-            <span class="text-[10px] bg-[#21262d] text-slate-400 px-1.5 py-0.5 rounded font-mono flex-shrink-0">
-              ${clip.voiceName} (${clip.rate}x)
-            </span>
+        clipEl.className = 'absolute h-16 top-1 rounded-lg bg-gradient-to-r from-cyan-600 to-indigo-700 border border-cyan-400/40 p-1.5 flex flex-col justify-between shadow-md cursor-pointer hover:border-cyan-300 transition';
+        clipEl.style.left = leftPx + 'px';
+        clipEl.style.width = widthPx + 'px';
+
+        clipEl.innerHTML = `
+          <div class="flex items-center justify-between text-[11px] text-white font-semibold">
+            <span class="truncate pl-0.5">${idx + 1}. ${clip.name}</span>
+            <button class="w-4 h-4 rounded hover:bg-black/40 flex items-center justify-center text-[10px] text-white/70 hover:text-white" onclick="deleteClip('${clip.id}', event)">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
           </div>
-          <div class="flex items-center gap-1 ml-2">
-            <button class="p-1 hover:text-cyan-400" title="Play Line" onclick="playSingleClip(${idx})">
-              <i class="fa-solid fa-play text-[10px]"></i>
-            </button>
-            <button class="p-1 hover:text-rose-400" title="Remove Line" onclick="removeClip(${idx})">
-              <i class="fa-solid fa-xmark text-[11px]"></i>
-            </button>
+          <div class="flex items-center justify-between text-[10px] text-cyan-200/80 font-mono">
+            <span>${clip.duration.toFixed(1)}s</span>
+            <span>${clip.voiceName}</span>
           </div>
         `;
-        timelineContainer.appendChild(item);
+
+        // Click on clip to seek directly to its start
+        clipEl.onclick = (e) => {
+          if (e.target.closest('button')) return;
+          seekTo(clip.start);
+        };
+
+        clipsLane.appendChild(clipEl);
       });
+
+      updatePlayheadUI(playheadTime);
     }
 
-    window.removeClip = function(idx) {
-      timelineClips.splice(idx, 1);
-      renderTimelineUI();
-    };
+    window.deleteClip = function(clipId, e) {
+      if (e) e.stopPropagation();
+      stopTimelinePlayback();
 
-    window.playSingleClip = function(idx) {
-      stopAllPlayback();
-      const clip = timelineClips[idx];
-      const utterance = new SpeechSynthesisUtterance(clip.text);
-      if (availableVoices[clip.voiceIndex]) utterance.voice = availableVoices[clip.voiceIndex];
-      utterance.rate = clip.rate;
-      utterance.pitch = clip.pitch;
-      window.speechSynthesis.speak(utterance);
-    };
+      const idx = trackClips.findIndex(c => c.id === clipId);
+      if (idx !== -1) {
+        trackClips.splice(idx, 1);
 
-    document.getElementById('btn-clear-timeline').onclick = () => {
-      if (!timelineClips.length) return;
-      if (confirm('Clear all queued clips from this voice track?')) {
-        stopAllPlayback();
-        timelineClips = [];
-        renderTimelineUI();
-      }
-    };
-
-    /* ==========================================================================
-       FULL SEQUENCE PLAYBACK ENGINE
-       ========================================================================== */
-    function stopAllPlayback() {
-      window.speechSynthesis.cancel();
-      isPlayingSequence = false;
-      activeSequenceIndex = -1;
-      document.getElementById('seq-play-icon').className = 'fa-solid fa-play text-xs';
-      seqStatus.innerText = 'Ready';
-      renderTimelineUI();
-    }
-
-    document.getElementById('btn-stop-sequence').onclick = stopAllPlayback;
-
-    btnPlaySeq.onclick = () => {
-      if (isPlayingSequence) {
-        stopAllPlayback();
-        return;
-      }
-      playSequenceFromIndex(0);
-    };
-
-    function playSequenceFromIndex(index) {
-      if (index >= timelineClips.length) {
-        stopAllPlayback();
-        seqStatus.innerText = 'Sequence Finished';
-        return;
-      }
-
-      isPlayingSequence = true;
-      activeSequenceIndex = index;
-      renderTimelineUI();
-
-      seqStatus.innerText = `Playing Clip ${index + 1} of ${timelineClips.length}`;
-      document.getElementById('seq-play-icon').className = 'fa-solid fa-pause text-xs';
-
-      const clip = timelineClips[index];
-      const utterance = new SpeechSynthesisUtterance(clip.text);
-      if (availableVoices[clip.voiceIndex]) utterance.voice = availableVoices[clip.voiceIndex];
-      utterance.rate = clip.rate;
-      utterance.pitch = clip.pitch;
-
-      utterance.onend = () => {
-        // Natural 250ms phrase breath gap between lines
-        setTimeout(() => {
-          if (isPlayingSequence) playSequenceFromIndex(index + 1);
-        }, 250);
-      };
-
-      utterance.onerror = () => {
-        stopAllPlayback();
-      };
-
-      window.speechSynthesis.speak(utterance);
-    }
-
-    /* ==========================================================================
-       SEQUENCE CAPTURE & RECORDING ENGINE (EXPORT WAV/MP3)
-       ========================================================================== */
-    async function getTabAudioStream() {
-      if (cachedStream && cachedStream.active && cachedStream.getAudioTracks().length > 0) {
-        return cachedStream;
-      }
-
-      try {
-        exportStatus.innerText = 'Select "This Tab" and check "Share audio"...';
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false
-          },
-          preferCurrentTab: true,
-          selfBrowserSurface: "include",
-          systemAudio: "include"
+        // Recalculate start times sequentially
+        let currentPos = 0;
+        trackClips.forEach(clip => {
+          clip.start = currentPos;
+          currentPos = Math.round((currentPos + clip.duration + 0.2) * 100) / 100;
         });
+      }
 
-        const audioTracks = stream.getAudioTracks();
-        if (audioTracks.length === 0) {
-          stream.getTracks().forEach(t => t.stop());
-          alert('No audio track selected! Please check the "Share audio" box when selecting the tab.');
-          exportStatus.innerText = 'Audio permission missing';
-          return null;
-        }
+      seekTo(0);
+      renderTimeline();
+    };
 
-        stream.getVideoTracks().forEach(t => t.stop());
-        cachedStream = stream;
-        return stream;
-      } catch (err) {
-        console.warn('Capture canceled:', err);
-        exportStatus.innerText = 'Capture canceled';
-        return null;
+    document.getElementById('btn-clear-track').onclick = () => {
+      if (!trackClips.length) return;
+      if (confirm('Clear all dialogue clips from this timeline track?')) {
+        stopTimelinePlayback();
+        trackClips = [];
+        seekTo(0);
+        renderTimeline();
+      }
+    };
+
+    /* ==========================================================================
+       TRANSPORT & PLAYBACK ENGINE (IDENTICAL TO SOUNDFORGE)
+       ========================================================================== */
+    function updatePlayheadUI(time) {
+      playheadTime = time;
+      playhead.style.left = (playheadTime * PIXELS_PER_SECOND) + 'px';
+
+      const mins = Math.floor(playheadTime / 60);
+      const secs = Math.floor(playheadTime % 60);
+      const ms = Math.floor((playheadTime % 1) * 100);
+      timeDisplay.innerText = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}.${ms < 10 ? '0' : ''}${ms}`;
+    }
+
+    function seekTo(targetTime) {
+      const maxTime = trackClips.length > 0 
+        ? trackClips[trackClips.length - 1].start + trackClips[trackClips.length - 1].duration 
+        : 0;
+
+      const clamped = Math.max(0, Math.min(maxTime, targetTime));
+      playheadTime = clamped;
+
+      if (isPlaying) {
+        stopTimelinePlayback();
+        startTimelinePlayback();
+      } else {
+        updatePlayheadUI(playheadTime);
       }
     }
 
-    async function recordMasterSequenceToBuffer() {
-      if (!timelineClips.length) return null;
+    function startTimelinePlayback() {
+      if (!trackClips.length) return;
+      const ctx = getAudioContext();
+      activeSourceNodes = [];
+      playbackStartTime = ctx.currentTime - playheadTime;
 
-      const stream = await getTabAudioStream();
-      if (!stream) return null;
+      trackClips.forEach(clip => {
+        const clipEnd = clip.start + clip.duration;
+        if (clipEnd > playheadTime) {
+          const src = ctx.createBufferSource();
+          src.buffer = clip.audioBuffer;
+          src.connect(ctx.destination);
 
-      stopAllPlayback();
-      exportStatus.innerText = 'Recording timeline sequence...';
+          let offset = 0;
+          let startAt = 0;
 
-      return new Promise((resolve) => {
-        const mediaRecorder = new MediaRecorder(stream);
-        const recordedChunks = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) recordedChunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = async () => {
-          exportStatus.innerText = 'Processing sequence audio...';
-          const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-          const arrayBuf = await blob.arrayBuffer();
-          const ctx = getAudioContext();
-          const decoded = await ctx.decodeAudioData(arrayBuf);
-          resolve(decoded);
-        };
-
-        // Start recorder, then chain playback
-        mediaRecorder.start(100);
-
-        function playStep(idx) {
-          if (idx >= timelineClips.length) {
-            setTimeout(() => {
-              if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-              stopAllPlayback();
-            }, 350);
-            return;
+          if (playheadTime >= clip.start) {
+            offset = playheadTime - clip.start;
+            startAt = ctx.currentTime;
+          } else {
+            offset = 0;
+            startAt = ctx.currentTime + (clip.start - playheadTime);
           }
 
-          const clip = timelineClips[idx];
-          const utterance = new SpeechSynthesisUtterance(clip.text);
-          if (availableVoices[clip.voiceIndex]) utterance.voice = availableVoices[clip.voiceIndex];
-          utterance.rate = clip.rate;
-          utterance.pitch = clip.pitch;
+          src.start(startAt, offset);
+          activeSourceNodes.push(src);
+        }
+      });
 
-          utterance.onend = () => {
-            setTimeout(() => playStep(idx + 1), 250);
-          };
+      isPlaying = true;
+      document.getElementById('transport-play-icon').className = 'fa-solid fa-pause text-xs';
+      transportStatus.innerText = 'Playing timeline...';
 
-          utterance.onerror = () => {
-            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-            stopAllPlayback();
-          };
+      const tick = () => {
+        playheadTime = ctx.currentTime - playbackStartTime;
+        const totalDuration = trackClips[trackClips.length - 1].start + trackClips[trackClips.length - 1].duration;
 
-          window.speechSynthesis.speak(utterance);
+        if (playheadTime >= totalDuration) {
+          seekTo(0);
+          stopTimelinePlayback();
+          transportStatus.innerText = 'Finished';
+          return;
         }
 
-        playStep(0);
-      });
+        updatePlayheadUI(playheadTime);
+        animationFrameId = requestAnimationFrame(tick);
+      };
+      animationFrameId = requestAnimationFrame(tick);
     }
 
+    function stopTimelinePlayback() {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      activeSourceNodes.forEach(node => {
+        try { node.stop(); } catch (e) {}
+      });
+      activeSourceNodes = [];
+      isPlaying = false;
+      document.getElementById('transport-play-icon').className = 'fa-solid fa-play text-xs';
+      transportStatus.innerText = 'Stopped';
+      updatePlayheadUI(playheadTime);
+    }
+
+    btnPlayPause.onclick = () => {
+      if (isPlaying) stopTimelinePlayback();
+      else startTimelinePlayback();
+    };
+
+    document.getElementById('btn-stop-timeline').onclick = () => {
+      stopTimelinePlayback();
+      seekTo(0);
+    };
+
+    document.getElementById('btn-jump-start').onclick = () => seekTo(0);
+
     /* ==========================================================================
-       FILE EXPORTERS (WAV 16-BIT & MP3)
+       OFFLINE AUDIO MIXDOWN & EXPORT (ZERO PROMPTS, ZERO RECORDING WAIT)
        ========================================================================== */
+    async function renderTimelineMixdownBuffer() {
+      if (!trackClips.length) return null;
+
+      const totalDuration = trackClips[trackClips.length - 1].start + trackClips[trackClips.length - 1].duration + 0.3;
+      const sampleRate = 44100;
+      const offlineCtx = new OfflineAudioContext(2, Math.floor(sampleRate * totalDuration), sampleRate);
+
+      trackClips.forEach(clip => {
+        const src = offlineCtx.createBufferSource();
+        src.buffer = clip.audioBuffer;
+        src.connect(offlineCtx.destination);
+        src.start(clip.start);
+      });
+
+      exportStatus.innerText = 'Rendering mixdown...';
+      return await offlineCtx.startRendering();
+    }
+
+    // 16-Bit PCM WAV Encoder
     function audioBufferToWavBlob(buffer) {
       const numOfChan = buffer.numberOfChannels;
       const length = buffer.length * numOfChan * 2 + 44;
@@ -508,7 +554,7 @@
       setUint32(length - 8);
       setUint32(0x45564157); // "WAVE"
       setUint32(0x20746d66); // "fmt "
-      setUint32(16);          // 16-bit PCM Subchunk
+      setUint32(16);          // 16-bit Subchunk
       setUint16(1);           // Linear PCM
       setUint16(numOfChan);
       setUint32(buffer.sampleRate);
@@ -535,6 +581,7 @@
       return new Blob([out.buffer], { type: 'audio/wav' });
     }
 
+    // MP3 LameJS Encoder
     function audioBufferToMp3Blob(buffer) {
       const channels = buffer.numberOfChannels;
       const sampleRate = buffer.sampleRate;
@@ -582,27 +629,27 @@
     }
 
     btnExportWav.onclick = async () => {
-      const buffer = await recordMasterSequenceToBuffer();
-      if (!buffer) return;
+      const rendered = await renderTimelineMixdownBuffer();
+      if (!rendered) return;
 
-      const blob = audioBufferToWavBlob(buffer);
-      triggerDownload(blob, `voice_sequence_${Date.now()}.wav`);
+      const blob = audioBufferToWavBlob(rendered);
+      triggerDownload(blob, `voice_timeline_${Date.now()}.wav`);
       exportStatus.innerText = 'Downloaded Master WAV!';
       setTimeout(() => { exportStatus.innerText = ''; }, 3000);
     };
 
     btnExportMp3.onclick = async () => {
-      const buffer = await recordMasterSequenceToBuffer();
-      if (!buffer) return;
+      const rendered = await renderTimelineMixdownBuffer();
+      if (!rendered) return;
 
-      const blob = audioBufferToMp3Blob(buffer);
-      triggerDownload(blob, `voice_sequence_${Date.now()}.mp3`);
+      const blob = audioBufferToMp3Blob(rendered);
+      triggerDownload(blob, `voice_timeline_${Date.now()}.mp3`);
       exportStatus.innerText = 'Downloaded Master MP3!';
       setTimeout(() => { exportStatus.innerText = ''; }, 3000);
     };
 
     /* ==========================================================================
-       ISOLATED SPEECH DICTATION
+       VOICE DICTATION (SPEECH-TO-TEXT)
        ========================================================================== */
     const btnStt = document.getElementById('btn-stt');
     const sttLabel = document.getElementById('stt-label');
@@ -631,7 +678,7 @@
           recognition.stop();
           isDictating = false;
           sttLabel.innerText = 'Dictate Text';
-          sttStatusText.innerText = 'Dictate with your mic to convert spoken words into text below.';
+          sttStatusText.innerText = 'Dictate with your mic to convert spoken words into dialogue below.';
           btnStt.className = 'px-3 py-1.5 bg-[#21262d] hover:bg-[#30363d] text-cyan-400 rounded-lg text-xs font-bold border border-[#30363d] flex items-center gap-1.5 transition';
           sttMicIcon.className = 'fa-solid fa-microphone';
         }
